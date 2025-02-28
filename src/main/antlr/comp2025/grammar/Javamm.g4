@@ -8,21 +8,36 @@ CLASS : 'class' ;
 INT : 'int' ;
 PUBLIC : 'public' ;
 RETURN : 'return' ;
+BOOLEAN : 'boolean' ;
+TRUE : 'true';
+FALSE : 'false';
+STATIC : 'static';
+VOID : 'void';
+MAIN : 'main';
+IF : 'if';
+ELSE : 'else';
+WHILE : 'while';
+NEW : 'new';
+THIS : 'this';
+LENGTH : 'length';
 
-INTEGER : [0-9] ;
-ID : [a-zA-Z]+ ;
+INTEGER : [0] | [1-9][0-9]* ;
+ID : [a-zA-Z$_][a-zA-Z0-9$_]* ;
 
 WS : [ \t\n\r\f]+ -> skip ;
 
 program
-    : classDecl EOF
+    : (importDecl)* classDecl EOF
     ;
 
+importDecl
+    : 'import' ID ('.' ID)* ';'
+    ;
 
 classDecl
-    : CLASS name=ID
+  : CLASS ID ('extends' ID )?
         '{'
-        methodDecl*
+        (varDecl)* (methodDecl)*
         '}'
     ;
 
@@ -31,13 +46,22 @@ varDecl
     ;
 
 type
-    : name= INT ;
+    : INT '[' ']'
+    | INT '...'
+    | INT
+    | BOOLEAN
+    | ID
+    ;
 
 methodDecl locals[boolean isPublic=false]
     : (PUBLIC {$isPublic=true;})?
-        type name=ID
-        '(' param ')'
-        '{' varDecl* stmt* '}'
+      type name=ID
+      '(' (param (',' param)*)? ')'
+      '{' (varDecl)* (stmt)* 'return' expr ';' '}'
+    | (PUBLIC {$isPublic=true;})?
+      STATIC VOID MAIN
+      '(' ID '[' ']' ID ')'
+      '{' (varDecl)* (stmt)* '}'
     ;
 
 param
@@ -45,14 +69,30 @@ param
     ;
 
 stmt
-    : expr '=' expr ';' #AssignStmt //
-    | RETURN expr ';' #ReturnStmt
+    : '{' (stmt)* '}'
+    | IF '(' expr ')' stmt (ELSE stmt)?
+    | WHILE '(' expr ')' stmt
+    | expr ';'
+    | ID '=' expr ';'
+    | ID '[' expr ']' '=' expr ';'
     ;
 
 expr
-    : expr op= '*' expr #BinaryExpr //
-    | expr op= '+' expr #BinaryExpr //
-    | value=INTEGER #IntegerLiteral //
-    | name=ID #VarRefExpr //
+    : expr ('*'|'/') expr
+    | expr ('+'|'-') expr
+    | expr ('&&'|'<') expr
+    | expr '[' expr ']'
+    | expr '.' LENGTH
+    | expr '.' ID '(' (expr (',' expr)*)? ')'
+    | NEW 'int' '[' expr ']'
+    | NEW ID '(' ')'
+    | '!' expr
+    | '(' expr ')'
+    | '[' (expr (',' expr)*)? ']'
+    | INTEGER
+    | TRUE
+    | FALSE
+    | ID
+    | THIS
     ;
 

@@ -24,6 +24,7 @@ public class GrammarTest {
     private static final String INSTANCE_METHOD = "methodDecl";
     private static final String STATEMENT = "stmt";
     private static final String EXPRESSION = "expr";
+    private static final String VARDECL = "varDecl";
 
     @Test
     public void testImportSingle() {
@@ -45,10 +46,10 @@ public class GrammarTest {
         TestUtils.parseVerbose("class Foo {int a; int[] b; int c; boolean d; Bar e;}");
     }
 
-   /*@Test
+   @Test
     public void testVarDeclString() {
-        TestUtils.parseVerbose("String aString;", "VarDecl");
-    }*/
+        TestUtils.parseVerbose("String aString;", VARDECL);
+    }
 
     @Test
     public void testMainMethodEmpty() {
