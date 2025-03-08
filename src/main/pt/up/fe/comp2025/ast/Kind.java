@@ -6,12 +6,11 @@ import pt.up.fe.specs.util.SpecsStrings;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
 
 /**
  * Enum that mirrors the nodes that are supported by the AST.
  *
- * This enum allows to handle nodes in a safer and more flexible way that using strings with the names of the nodes.
+ * This enum allows handling nodes in a safer and more flexible way than using strings with their names.
  */
 public enum Kind {
     PROGRAM,
@@ -21,13 +20,16 @@ public enum Kind {
     METHOD_DECL,
     PARAM,
     STMT,
-    ASSIGN_STMT,
-    RETURN_STMT,
     EXPR,
-    BINARY_EXPR,
-    INTEGER_LITERAL,
-    VAR_REF_EXPR;
-
+    BINARY_OP,
+    ARRAY_LITERAL,
+    LITERAL,
+    UNARY_OP,
+    PRIMARY,
+    ACCESS_OR_CALL,
+    IDENTIFIER,
+    THIS_REFERENCE,
+    IMPORT_DECL;
 
     private final String name;
 
@@ -39,8 +41,11 @@ public enum Kind {
         this.name = SpecsStrings.toCamelCase(name(), "_", true);
     }
 
+    /**
+     * Converts a string representation of a node kind into a Kind enum.
+     * Throws an exception if no match is found.
+     */
     public static Kind fromString(String kind) {
-
         for (Kind k : Kind.values()) {
             if (k.getNodeName().equals(kind)) {
                 return k;
@@ -49,17 +54,23 @@ public enum Kind {
         throw new RuntimeException("Could not convert string '" + kind + "' to a Kind");
     }
 
+    /**
+     * Returns a list of node names from the provided kinds.
+     */
     public static List<String> toNodeName(Kind firstKind, Kind... otherKinds) {
         var nodeNames = new ArrayList<String>();
         nodeNames.add(firstKind.getNodeName());
 
-        for(Kind kind : otherKinds) {
+        for (Kind kind : otherKinds) {
             nodeNames.add(kind.getNodeName());
         }
 
         return nodeNames;
     }
 
+    /**
+     * Retrieves the string representation of the node kind.
+     */
     public String getNodeName() {
         return name;
     }
@@ -70,57 +81,39 @@ public enum Kind {
     }
 
     /**
-     * Tests if the given JmmNode has the same kind as this type.
-     *
-     * @param node
-     * @return
+     * Checks if the given JmmNode has the same kind as this Kind.
      */
     public boolean check(JmmNode node) {
         return node.isInstance(this);
     }
 
     /**
-     * Performs a check and throws if the test fails. Otherwise, does nothing.
-     *
-     * @param node
+     * Performs a check and throws an exception if the test fails.
      */
     public void checkOrThrow(JmmNode node) {
-
         if (!check(node)) {
             throw new RuntimeException("Node '" + node + "' is not a '" + getNodeName() + "'");
         }
     }
 
     /**
-     * Performs a check on all kinds to test and returns false if none matches. Otherwise, returns true.
-     *
-     * @param node
-     * @param kindsToTest
-     * @return
+     * Checks if the given JmmNode matches any of the provided kinds.
+     * Returns true if at least one match is found, otherwise false.
      */
     public static boolean check(JmmNode node, Kind... kindsToTest) {
-
         for (Kind k : kindsToTest) {
-
-            // if any matches, return successfully
             if (k.check(node)) {
-
                 return true;
             }
         }
-
         return false;
     }
 
     /**
-     * Performs a check an all kinds to test and throws if none matches. Otherwise, does nothing.
-     *
-     * @param node
-     * @param kindsToTest
+     * Performs a check on multiple kinds and throws an exception if none match.
      */
     public static void checkOrThrow(JmmNode node, Kind... kindsToTest) {
         if (!check(node, kindsToTest)) {
-            // throw if none matches
             throw new RuntimeException("Node '" + node + "' is not any of " + Arrays.asList(kindsToTest));
         }
     }

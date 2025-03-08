@@ -33,9 +33,9 @@ public class Launcher {
         TestUtils.noErrors(parserResult.getReports());
 
         // Print AST
-        //System.out.println("AST:");
-        //System.out.println(parserResult.getRootNode().toTree());
-
+        System.out.println("AST:");
+        System.out.println(parserResult.getRootNode().toTree());
+        System.exit(0);
 
         // Semantic Analysis stage
         JmmAnalysisImpl sema = new JmmAnalysisImpl();

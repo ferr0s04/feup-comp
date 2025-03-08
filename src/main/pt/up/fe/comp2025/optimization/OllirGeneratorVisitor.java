@@ -46,8 +46,7 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         addVisit(CLASS_DECL, this::visitClass);
         addVisit(METHOD_DECL, this::visitMethodDecl);
         addVisit(PARAM, this::visitParam);
-        addVisit(RETURN_STMT, this::visitReturn);
-        addVisit(ASSIGN_STMT, this::visitAssignStmt);
+        addVisit(STMT, this::visitStmt);
 
 //        setDefaultVisit(this::defaultVisit);
     }
@@ -182,6 +181,76 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
 
         return code.toString();
     }
+
+    private String visitStmt(JmmNode node, Void unused) {
+        StringBuilder code = new StringBuilder();
+
+        // Check for different types of statements
+
+        if (node.getNumChildren() == 0) {
+            // Empty block (e.g., `{}`)
+            return "";
+        }
+
+        JmmNode firstChild = node.getChild(0);
+
+        if (firstChild.getKind().equals("IF")) {
+            // Handle IF statement
+            String condition = String.valueOf(exprVisitor.visit(firstChild.getChild(0))); // Visit the expression
+            String ifStmt = visitStmt(firstChild.getChild(1), unused); // Visit the "then" part of the statement
+
+            String elseStmt = "";
+            if (node.getNumChildren() > 1) {
+                // Handle optional ELSE statement
+                JmmNode elseChild = node.getChild(2);
+                elseStmt = visitStmt(elseChild, unused);
+            }
+
+            code.append("if (").append(condition).append(") ")
+                    .append(ifStmt);
+
+            if (!elseStmt.isEmpty()) {
+                code.append("else ").append(elseStmt);
+            }
+
+            code.append(END_STMT);
+        } else if (firstChild.getKind().equals("WHILE")) {
+            // Handle WHILE statement
+            String condition = String.valueOf(exprVisitor.visit(firstChild.getChild(0))); // Visit the expression
+            String whileStmt = visitStmt(firstChild.getChild(1), unused); // Visit the loop body
+
+            code.append("while (").append(condition).append(") ")
+                    .append(whileStmt)
+                    .append(END_STMT);
+        } else if (firstChild.getKind().equals("ID") && node.getNumChildren() == 3) {
+            // Handle assignment statements: name = expr;
+            String varName = firstChild.getKind();  // Get the kind of the node (ID in this case)
+            String expr = String.valueOf(exprVisitor.visit(node.getChild(1))); // Visit the expression
+
+            code.append(varName).append(" = ").append(expr)
+                    .append(END_STMT);
+        } else if (firstChild.getKind().equals("ID") && node.getNumChildren() == 4) {
+            // Handle array assignment: name[expr] = expr;
+            String varName = firstChild.getKind();  // Get the kind of the node (ID)
+            String index = String.valueOf(exprVisitor.visit(node.getChild(1))); // Visit the index expression
+            String value = String.valueOf(exprVisitor.visit(node.getChild(2))); // Visit the value expression
+
+            code.append(varName).append("[").append(index).append("] = ").append(value)
+                    .append(END_STMT);
+        } else if (firstChild.getKind().equals("EXPR")) {
+            // Handle expression statement: expr;
+            String expr = String.valueOf(exprVisitor.visit(firstChild)); // Visit the expression
+
+            code.append(expr)
+                    .append(END_STMT);
+        } else {
+            // Unknown statement, handle accordingly or throw an error
+            throw new UnsupportedOperationException("Unknown statement type: " + firstChild.getKind());
+        }
+
+        return code.toString();
+    }
+
 
     private String buildConstructor() {
 

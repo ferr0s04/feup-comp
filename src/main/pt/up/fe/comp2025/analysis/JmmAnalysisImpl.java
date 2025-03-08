@@ -4,13 +4,11 @@ import pt.up.fe.comp.jmm.analysis.JmmAnalysis;
 import pt.up.fe.comp.jmm.analysis.JmmSemanticsResult;
 import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
 import pt.up.fe.comp.jmm.ast.JmmNode;
-import pt.up.fe.comp.jmm.ast.JmmNodeImpl;
 import pt.up.fe.comp.jmm.parser.JmmParserResult;
 import pt.up.fe.comp.jmm.report.Report;
 import pt.up.fe.comp.jmm.report.ReportType;
 import pt.up.fe.comp.jmm.report.Stage;
 import pt.up.fe.comp2025.analysis.passes.*;
-import pt.up.fe.comp2025.ast.Kind;
 import pt.up.fe.comp2025.symboltable.JmmSymbolTableBuilder;
 
 import java.util.ArrayList;
@@ -29,7 +27,11 @@ public class JmmAnalysisImpl implements JmmAnalysis {
      * @return
      */
     private List<AnalysisVisitor> buildPasses(SymbolTable table) {
-        return List.of(new UndeclaredVariable());
+        return List.of(
+                new IdentifierAndDeclarationVerification(),
+                new TypeCheckingVisitor(),
+                new MethodCallVerificationVisitor()
+        );
     }
 
     @Override

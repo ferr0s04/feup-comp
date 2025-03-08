@@ -31,11 +31,11 @@ program
     ;
 
 importDecl
-    : 'import' ID ('.' ID)* ';'
+    : 'import' name+=ID ('.' name+=ID)* ';'
     ;
 
 classDecl
-  : CLASS ID ('extends' ID )?
+  : CLASS name=ID ('extends' extended=ID )?
         '{'
         (varDecl)* (methodDecl)*
         '}'
@@ -46,11 +46,11 @@ varDecl
     ;
 
 type
-    : INT '[' ']'
-    | INT '...'
-    | INT
-    | BOOLEAN
-    | ID
+    : value=INT '[' ']'
+    | value=INT '...'
+    | value=INT
+    | value=BOOLEAN
+    | name=ID
     ;
 
 methodDecl locals[boolean isPublic=false]
@@ -59,10 +59,11 @@ methodDecl locals[boolean isPublic=false]
       '(' (param (',' param)*)? ')'
       '{' (varDecl)* (stmt)* 'return' expr ';' '}'
     | (PUBLIC {$isPublic=true;})?
-      STATIC VOID MAIN
+      STATIC VOID name=MAIN
       '(' ID '[' ']' ID ')'
       '{' (varDecl)* (stmt)* '}'
     ;
+
 
 param
     : type name=ID
@@ -73,26 +74,28 @@ stmt
     | IF '(' expr ')' stmt (ELSE stmt)?
     | WHILE '(' expr ')' stmt
     | expr ';'
-    | ID '=' expr ';'
-    | ID '[' expr ']' '=' expr ';'
+    | name=ID '=' expr ';'
+    | name=ID '[' expr ']' '=' expr ';'
     ;
 
 expr
-    : expr ('*'|'/') expr
-    | expr ('+'|'-') expr
-    | expr ('&&'|'<') expr
-    | expr '[' expr ']'
-    | expr '.' LENGTH
-    | expr '.' ID '(' (expr (',' expr)*)? ')'
-    | NEW 'int' '[' expr ']'
-    | NEW ID '(' ')'
-    | '!' expr
-    | '(' expr ')'
-    | '[' (expr (',' expr)*)? ']'
-    | INTEGER
-    | TRUE
-    | FALSE
-    | ID
-    | THIS
+    : '(' expr ')'                                  # Primary
+    | '[' (expr (',' expr)*)? ']'                   # ArrayLiteral
+    | '!' expr                                      # UnaryOp
+    | NEW 'int' '[' expr ']'                        # Primary
+    | NEW name=ID '(' ')'                           # Primary
+    | expr '.' LENGTH                               # Primary
+    | expr '.' name=ID '(' (expr (',' expr)*)? ')'  # AccessOrCall
+    | expr '[' expr ']'                             # AccessOrCall
+    | expr op=('*' | '/') expr                      # BinaryOp
+    | expr op=('+' | '-') expr                      # BinaryOp
+    | expr op='<' expr                              # BinaryOp
+    | expr op='&&' expr                             # BinaryOp
+    | value=INTEGER                                 # Literal
+    | value=TRUE                                    # Literal
+    | value=FALSE                                   # Literal
+    | name=ID                                       # Identifier
+    | THIS                                          # ThisReference
     ;
+
 

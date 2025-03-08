@@ -3,37 +3,43 @@ package pt.up.fe.comp2025.symboltable;
 import pt.up.fe.comp.jmm.analysis.table.Symbol;
 import pt.up.fe.comp.jmm.analysis.table.Type;
 import pt.up.fe.comp2025.ast.TypeUtils;
-import pt.up.fe.specs.util.SpecsCheck;
-import pt.up.fe.specs.util.exceptions.NotImplementedException;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.List;
+import java.util.Map;
 
 public class JmmSymbolTable extends AJmmSymbolTable {
 
+    private final List<String> imports;
     private final String className;
+    private final String superClass;
+    private final List<Symbol> fields;
     private final List<String> methods;
     private final Map<String, Type> returnTypes;
     private final Map<String, List<Symbol>> params;
     private final Map<String, List<Symbol>> locals;
 
-
     public JmmSymbolTable(String className,
+                          String superClass,
+                          List<String> imports,
                           List<String> methods,
                           Map<String, Type> returnTypes,
                           Map<String, List<Symbol>> params,
-                          Map<String, List<Symbol>> locals) {
+                          Map<String, List<Symbol>> locals,
+                          List<Symbol> fields) {
 
         this.className = className;
+        this.superClass = superClass;
+        this.imports = imports;
         this.methods = methods;
         this.returnTypes = returnTypes;
         this.params = params;
         this.locals = locals;
+        this.fields = fields;
     }
 
     @Override
     public List<String> getImports() {
-        throw new NotImplementedException();
+        return imports;
     }
 
     @Override
@@ -43,41 +49,65 @@ public class JmmSymbolTable extends AJmmSymbolTable {
 
     @Override
     public String getSuper() {
-        throw new NotImplementedException();
+        return superClass;
     }
 
     @Override
     public List<Symbol> getFields() {
-        throw new NotImplementedException();
+        return fields;
     }
-
 
     @Override
     public List<String> getMethods() {
         return methods;
     }
 
-
     @Override
     public Type getReturnType(String methodSignature) {
-        // TODO: Simple implementation that needs to be expanded
-        return TypeUtils.newIntType();
+        return returnTypes.getOrDefault(methodSignature, TypeUtils.newVoidType());
     }
 
     @Override
     public List<Symbol> getParameters(String methodSignature) {
-        return params.get(methodSignature);
+        return params.getOrDefault(methodSignature, List.of());
     }
 
     @Override
     public List<Symbol> getLocalVariables(String methodSignature) {
-        return locals.get(methodSignature);
+        return locals.getOrDefault(methodSignature, List.of());
     }
 
     @Override
     public String toString() {
-        return print();
+        return "Class: " + className + (superClass != null ? " extends " + superClass : "") +
+                "\nImports: " + imports +
+                "\nFields: " + fields +
+                "\nMethods: " + methods +
+                "\nReturn Types: " + returnTypes +
+                "\nParameters: " + params +
+                "\nLocals: " + locals;
     }
 
+    public Type getVariableType(String varName, String methodName) {
+        for (Symbol localVar : getLocalVariables(methodName)) {
+            if (localVar.getName().equals(varName)) {
+                return localVar.getType();
+            }
+        }
+
+        for (Symbol param : getParameters(methodName)) {
+            if (param.getName().equals(varName)) {
+                return param.getType();
+            }
+        }
+
+        for (Symbol field : getFields()) {
+            if (field.getName().equals(varName)) {
+                return field.getType();
+            }
+        }
+
+        throw new IllegalArgumentException("Unknown variable: " + varName);
+    }
 
 }

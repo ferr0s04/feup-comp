@@ -87,6 +87,9 @@ public class SymbolTableTest {
         for (var m : methods) {
             var ret = st.getReturnType(m);
             var numParameters = st.getParameters(m).size();
+
+            System.out.println("Method: " + m + ", Return Type: " + ret.getName() + ", isArray: " + ret.isArray());
+
             switch (ret.getName()) {
                 case "MethodsAndFields":
                     checkObj++;
@@ -105,7 +108,6 @@ public class SymbolTableTest {
                         assertEquals("Method " + m + " parameters", 0, numParameters);
                     }
                     break;
-
             }
         }
         ;
