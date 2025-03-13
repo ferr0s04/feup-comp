@@ -99,6 +99,8 @@ public class JmmSymbolTableBuilder {
             Type returnType = null;
             if (methodNode.getChildren().size() > 0) {
                 var returnTypeNode = methodNode.getChild(0);  // This should be the return type node
+                System.out.println("Method " + methodName + " return type node: " + returnTypeNode);
+                System.out.println("Attributes: " + returnTypeNode.getAttributes());
                 returnType = extractType(returnTypeNode);
                 returnTypes.put(methodName, returnType);
             }

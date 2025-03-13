@@ -45,11 +45,12 @@ varDecl
     : type name=ID ';'
     ;
 
-type
-    : value=INT '[' ']'
-    | value=INT '...'
+type locals[boolean isArray=false]
+    : value=INT '[' ']' { $isArray = true; }
+    | value=INT '...' { $isArray = true; }
     | value=INT
     | value=BOOLEAN
+    | name=ID '[' ']' { $isArray = true; }
     | name=ID
     ;
 
