@@ -17,6 +17,8 @@ MAIN : 'main';
 IF : 'if';
 ELSE : 'else';
 WHILE : 'while';
+FOR : 'for';
+ELSEIF : 'else if';
 NEW : 'new';
 THIS : 'this';
 LENGTH : 'length';
@@ -30,7 +32,8 @@ LINE_COMMENT : '//' ~[\r\n]* -> skip ;
 BLOCK_COMMENT : '/*' .*? '*/' -> skip ;
 
 program
-    : (importDecl)* classDecl EOF
+    : stmt + EOF
+    | (importDecl)* classDecl EOF
     ;
 
 importDecl
@@ -46,6 +49,7 @@ classDecl
 
 varDecl
     : type name=ID ';'
+    | type name=ID op='[' op=']' ';'
     ;
 
 type locals[boolean isArray=false]
@@ -74,10 +78,12 @@ param
     ;
 
 stmt
-    : '{' (stmt)* '}'
-    | IF '(' expr ')' stmt (ELSE stmt)?
+    : expr ';'
+    | 'return' expr? ';'
+    | '{' (stmt)* '}'
+    | IF '(' expr ')' stmt (ELSEIF '(' expr ')' stmt )* (ELSE stmt)?
+    | FOR '(' stmt expr ';' expr ')' stmt
     | WHILE '(' expr ')' stmt
-    | expr ';'
     | name=ID '=' expr ';'
     | name=ID '[' expr ']' '=' expr ';'
     ;
@@ -93,12 +99,15 @@ expr
     | expr '[' expr ']'                             # AccessOrCall
     | expr op=('*' | '/') expr                      # BinaryOp
     | expr op=('+' | '-') expr                      # BinaryOp
-    | expr op='<' expr                              # BinaryOp
+    | expr op=('<' | '>') expr                      #BinaryOp
+    | expr op=('<=' | '>=' | '==' | '!=' | '+=' | '-=' | '*=' | '/=') expr #BinaryOp
     | expr op='&&' expr                             # BinaryOp
+    | expr op='||' expr #BinaryOp
     | value=INTEGER                                 # Literal
     | value=TRUE                                    # Literal
     | value=FALSE                                   # Literal
     | name=ID                                       # Identifier
+    | name=ID op=('++' | '--') #Increment
     | THIS                                          # ThisReference
     ;
 
