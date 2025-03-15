@@ -74,9 +74,58 @@ public class TypeUtils {
             case IDENTIFIER -> lookupVariableType(expr);
             case ACCESS_OR_CALL -> inferArrayAccessType(expr);
             case METHOD_DECL -> lookupMethodReturnType(expr);
-            default -> throw new IllegalArgumentException("Unknown expression type: " + kind);
+            case PRIMARY -> inferPrimaryType(expr);
+            case NEW_OBJECT -> {
+                String className = expr.get("name");
+                yield new Type(className, false);
+            }
+            case THIS_REFERENCE -> {
+                String className = table.getClassName();
+                yield new Type(className, false);
+            }
+            default -> throw new IllegalArgumentException("Unsupported expression type: " + kind);
         };
     }
+
+
+
+    /**
+     * Infers the type of a primary expression (literal, identifier, etc.).
+     */
+    private Type inferPrimaryType(JmmNode primaryNode) {
+        // Handle nested primary expressions
+        if (primaryNode.getKind().equals("Primary")) {
+            if (primaryNode.getChildren().size() == 1) {
+                return inferPrimaryType(primaryNode.getChildren().get(0)); // Recursively handle nested expressions
+            }
+        }
+
+        // Handle literals
+        if (primaryNode.hasAttribute("value")) {
+            return inferLiteralType(primaryNode);
+        }
+
+        // Handle identifiers
+        if (primaryNode.getKind().equals("Identifier")) {
+            return lookupVariableType(primaryNode);
+        }
+
+        // Handle object creation (e.g., new ClassName())
+        if (primaryNode.getKind().equals("NewObject")) {
+            String className = primaryNode.get("name");
+            return new Type(className, false); // Assuming "false" for non-array objects
+        }
+
+        // Handle array creation (e.g., new int[10])
+        if (primaryNode.getKind().equals("NewArray")) {
+            String elementType = primaryNode.get("type");
+            return new Type(elementType, true); // Mark it as an array
+        }
+
+        // If no case matches, throw an error
+        throw new IllegalArgumentException("Unknown primary expression: " + primaryNode);
+    }
+
 
     /**
      * Infers the type of a literal expression based on its value.
@@ -86,10 +135,16 @@ public class TypeUtils {
 
         if (value.equals("true") || value.equals("false")) {
             return newBooleanType();
+        } else if (value.matches("-?\\d+")) {
+            return newIntType(); // Handle integer literals
+        } else if (value.matches("\".*\"")) {
+            // Handle string literals (if applicable)
+            return new Type("String", false);
         } else {
-            return newIntType();
+            throw new IllegalArgumentException("Unsupported literal type: " + value);
         }
     }
+
 
     /**
      * Infers the result type of a binary operation based on the operator.
@@ -122,25 +177,44 @@ public class TypeUtils {
         }
 
         String varName = variableNode.get("name");
-        String methodName = variableNode.get("name");
 
-        return Optional.ofNullable(table.getVariableType(varName, methodName))
-                .orElseThrow(() -> new IllegalArgumentException("Unknown variable: " + varName));
+        String methodName = variableNode.getAncestor(Kind.METHOD_DECL)
+                .map(node -> node.get("name"))
+                .orElse(null);
+
+        // Ensure the variable is declared in the symbol table
+        Type type = table.getVariableType(varName, methodName);
+        if (type == null) {
+            throw new IllegalArgumentException("Variable '" + varName + "' not declared in method '" + methodName + "'");
+        }
+
+        return type;
     }
+
 
     /**
      * Infers the type of an array access expression.
-     * Ensures that the accessed expression is an array.
+     * Ensures that the accessed expression is an array or a valid varargs type.
      */
     private Type inferArrayAccessType(JmmNode arrayNode) {
+        // Get the type of the array expression (the child node)
         Type arrayExprType = getExprType(arrayNode.getChild(0));
 
-        if (!arrayExprType.isArray()) {
-            throw new IllegalArgumentException("Attempted indexing on a non-array type: " + arrayExprType);
+        // Ensure the expression is an array or varargs
+        if (!arrayExprType.isArray() && !"Varargs".equals(arrayExprType.getName())) {
+            throw new IllegalArgumentException("Attempted indexing on a non-array or non-varargs type: " + arrayExprType);
         }
 
-        return new Type(arrayExprType.getName(), false);
+        // If the type is an array, return the type of its elements (e.g., int[] -> int)
+        if (arrayExprType.isArray()) {
+            return new Type(arrayExprType.getName(), false); // Return the type of the array element, not the array itself
+        }
+
+        // If the type is Varargs, return the element type
+        return new Type(arrayExprType.getName(), false); // Assuming Varargs types are handled similarly to arrays
     }
+
+
 
     /**
      * Retrieves the return type of a method from the symbol table.
@@ -153,7 +227,13 @@ public class TypeUtils {
 
         String methodName = methodNode.get("name");
 
-        return Optional.ofNullable(table.getReturnType(methodName))
-                .orElseThrow(() -> new IllegalArgumentException("Unknown method: " + methodName));
+        // Ensure the method is declared in the symbol table
+        Type type = table.getReturnType(methodName);
+        if (type == null) {
+            throw new IllegalArgumentException("Method '" + methodName + "' not declared");
+        }
+
+        return type;
     }
+
 }

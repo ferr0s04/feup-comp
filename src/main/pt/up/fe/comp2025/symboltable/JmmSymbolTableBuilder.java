@@ -52,7 +52,7 @@ public class JmmSymbolTableBuilder {
             imports.add(extractImport(importNode));
         }
 
-        // Find the class declaration (after imports)
+        // Find the class declaration
         JmmNode classDecl = null;
         for (var child : root.getChildren()) {
             if (CLASS_DECL.check(child)) {
@@ -61,7 +61,6 @@ public class JmmSymbolTableBuilder {
             }
         }
 
-        // Ensure a class declaration was found
         SpecsCheck.checkArgument(classDecl != null, () -> "Expected a class declaration but none found");
 
         this.className = classDecl.get("name");
@@ -73,7 +72,7 @@ public class JmmSymbolTableBuilder {
             this.superClass = null;
         }
 
-        // Extract class fields (variables declared outside methods)
+        // Extract class fields
         for (var varDecl : classDecl.getChildren(VAR_DECL)) {
             fields.add(extractSymbol(varDecl));
         }
@@ -87,46 +86,46 @@ public class JmmSymbolTableBuilder {
     }
 
     private void processMethod(JmmNode methodNode) {
-        // Ensure methodNode is the method declaration
         if (methodNode.hasAttribute("name")) {
             var methodName = methodNode.get("name");
             methods.add(methodName);
 
-            // Debugging: Print the number of children of the method node
-            System.out.println("Method " + methodName + " has " + methodNode.getChildren().size() + " children.");
-
-            // Extract return type (the first child should be the return type node)
+            // Extract return type (it could be in the first child or elsewhere)
             Type returnType = null;
-            if (methodNode.getChildren().size() > 0) {
-                var returnTypeNode = methodNode.getChild(0);  // This should be the return type node
-                System.out.println("Method " + methodName + " return type node: " + returnTypeNode);
-                System.out.println("Attributes: " + returnTypeNode.getAttributes());
+            var returnTypeNode = methodNode.getChildren().stream()
+                    .filter(child -> TYPE.check(child)) // assuming TYPE is the rule for return types
+                    .findFirst().orElse(null);
+
+            if (returnTypeNode != null) {
                 returnType = extractType(returnTypeNode);
                 returnTypes.put(methodName, returnType);
+            } else {
+                // Handle missing return type (perhaps void or error)
+                returnTypes.put(methodName, new Type("void", false));  // Assuming void if no return type
             }
 
-            // Extract parameters (iterate through children excluding the return type)
+            // Extract parameters
             var paramList = new ArrayList<Symbol>();
-            int paramCount = 0;
-            for (int i = 1; i < methodNode.getChildren().size(); i++) { // Start from index 1 to skip return type
+            for (int i = 1; i < methodNode.getChildren().size(); i++) {
                 var childNode = methodNode.getChild(i);
                 if (PARAM.check(childNode)) {
-                    // Only count PARAM nodes as parameters
                     paramList.add(extractSymbol(childNode));
-                    paramCount++;
                 }
             }
-            parameters.put(methodName, paramList);
-            System.out.println("Method " + methodName + " has " + paramCount + " parameters.");
 
-            // Extract local variables (e.g., variables declared in the method body)
+            // Extract local variables
             var localVars = new ArrayList<Symbol>();
             for (var varNode : methodNode.getChildren(VAR_DECL)) {
-                // Debugging: Print each local variable node
-                System.out.println("Local variable node: " + varNode);
                 localVars.add(extractSymbol(varNode));
             }
-            localVariables.put(methodName, localVars);
+
+            // Merge parameters and local variables into the method's scope
+            var allVars = new ArrayList<>(paramList);
+            allVars.addAll(localVars);
+
+            // Add to symbol table maps
+            parameters.put(methodName, paramList);
+            localVariables.put(methodName, allVars);
         } else {
             System.out.println("No method name found in node: " + methodNode);
         }
@@ -135,29 +134,35 @@ public class JmmSymbolTableBuilder {
 
 
     private Type extractType(JmmNode typeNode) {
-        // Check if the node represents a custom type (like a class or object)
         if (typeNode.hasAttribute("name")) {
-            // Custom type (like a class or object)
-            String typeName = typeNode.get("name");  // Get the name for custom types (e.g., class name)
+            // Custom types (e.g., class names)
+            String typeName = typeNode.get("name");
             boolean isArray = typeNode.hasAttribute("isArray") && typeNode.get("isArray").equals("true");
-            return new Type(typeName, isArray);  // Return custom type with array information
+            return new Type(typeName, isArray);
         } else if (typeNode.hasAttribute("value")) {
-            // Primitive types (like INT, BOOLEAN)
-            String typeName = typeNode.get("value");  // Get the type value for primitive types
+            // Primitive types
+            String typeName = typeNode.get("value");
             boolean isArray = typeNode.hasAttribute("isArray") && typeNode.get("isArray").equals("true");
-            return new Type(typeName, isArray);  // Return primitive type with array information
+            return new Type(typeName, isArray);
         } else {
-            // Handle cases where the type is unexpected or not handled correctly
             throw new IllegalArgumentException("Unexpected type node structure: " + typeNode);
         }
     }
 
 
     private Symbol extractSymbol(JmmNode node) {
-        Type type = extractType(node.getChild(0));
+        if (node.getNumChildren() == 0) {
+            throw new IllegalArgumentException("Variable declaration node has no children.");
+        }
+
+        // Ensure the first child is a valid type node
+        JmmNode typeNode = node.getChild(0);
+        Type type = extractType(typeNode);
+
         String name = node.get("name");
         return new Symbol(type, name);
     }
+
 
     private String extractImport(JmmNode importNode) {
         StringBuilder importPath = new StringBuilder(importNode.get("name"));

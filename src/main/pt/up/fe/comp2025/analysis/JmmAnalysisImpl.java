@@ -71,7 +71,6 @@ public class JmmAnalysisImpl implements JmmAnalysis {
 
                 // Return early in case of error report
                 if (hasSymbolTableErrors) {
-                    System.out.println("Found errors: " + reports);
                     return new JmmSemanticsResult(semanticsResult, reports);
                 }
 

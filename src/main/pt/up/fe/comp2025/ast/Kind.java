@@ -29,7 +29,8 @@ public enum Kind {
     ACCESS_OR_CALL,
     IDENTIFIER,
     THIS_REFERENCE,
-    IMPORT_DECL;
+    IMPORT_DECL,
+    NEW_OBJECT;
 
     private final String name;
 

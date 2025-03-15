@@ -26,6 +26,9 @@ ID : [a-zA-Z$_][a-zA-Z0-9$_]* ;
 
 WS : [ \t\n\r\f]+ -> skip ;
 
+LINE_COMMENT : '//' ~[\r\n]* -> skip ;
+BLOCK_COMMENT : '/*' .*? '*/' -> skip ;
+
 program
     : (importDecl)* classDecl EOF
     ;
@@ -84,7 +87,7 @@ expr
     | '[' (expr (',' expr)*)? ']'                   # ArrayLiteral
     | '!' expr                                      # UnaryOp
     | NEW 'int' '[' expr ']'                        # Primary
-    | NEW name=ID '(' ')'                           # Primary
+    | NEW name=ID '(' ')'                           # NewObject
     | expr '.' LENGTH                               # Primary
     | expr '.' name=ID '(' (expr (',' expr)*)? ')'  # AccessOrCall
     | expr '[' expr ']'                             # AccessOrCall
