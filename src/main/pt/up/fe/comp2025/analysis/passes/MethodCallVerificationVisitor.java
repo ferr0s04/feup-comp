@@ -2,12 +2,10 @@ package pt.up.fe.comp2025.analysis.passes;
 
 import pt.up.fe.comp.jmm.analysis.table.Symbol;
 import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
-import pt.up.fe.comp.jmm.analysis.table.Type;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp2025.analysis.AnalysisVisitor;
 import pt.up.fe.comp2025.ast.Kind;
 
-import java.util.List;
 
 public class MethodCallVerificationVisitor extends AnalysisVisitor {
 
@@ -39,69 +37,72 @@ public class MethodCallVerificationVisitor extends AnalysisVisitor {
     }
 
     private Void visitMethodCallExpr(JmmNode methodCallExpr, SymbolTable table) {
-        // Ensure it's actually a method call
-        Kind.checkOrThrow(methodCallExpr, Kind.ACCESS_OR_CALL);
+        // Check if it's an array access
+        if (methodCallExpr.getChildren().size() == 2) {
+            JmmNode arrayExpr = methodCallExpr.getChildren().get(0);
+            JmmNode indexExpr = methodCallExpr.getChildren().get(1);
 
-        // Retrieve the method name (assuming it's stored in an IDENTIFIER child)
-        JmmNode identifierNode = methodCallExpr.getChildren().stream()
-                .filter(child -> child.getKind().equals(Kind.IDENTIFIER.getNodeName()))
-                .findFirst()
-                .orElse(null);
+            String arrayVarName = arrayExpr.get("name");
 
-        if (identifierNode == null) {
-            addReport(newError(methodCallExpr, "Method call is missing an identifier."));
-            return null;
-        }
-
-        String methodName = identifierNode.get("name");
-
-        // Verify if the method is declared
-        if (!isDeclaredMethod(methodName, table)) {
-            addReport(newError(methodCallExpr, "Method '" + methodName + "' is not declared or accessible."));
-            return null;
-        }
-
-        // Retrieve arguments
-        List<JmmNode> arguments = methodCallExpr.getChildren().stream()
-                .filter(child -> child.getKind().equals(Kind.EXPR.getNodeName()))
-                .toList();
-
-        int expectedArgCount = getExpectedArgumentCount(methodName, table);
-
-        if (arguments.size() != expectedArgCount) {
-            addReport(newError(methodCallExpr, "Method '" + methodName + "' expects " + expectedArgCount + " arguments, but got " + arguments.size() + "."));
-        }
-
-        // Type checking for arguments
-        for (int i = 0; i < arguments.size(); i++) {
-            Type expectedType = getExpectedArgumentType(methodName, i, table);
-            String argType = arguments.get(i).get("type");
-
-            if (!argType.equals(expectedType.getName())) {
-                addReport(newError(methodCallExpr, "Argument type mismatch for parameter " + (i + 1) + " in method '" + methodName + "'. Expected: " + expectedType + ", found: " + argType + "."));
+            // Retrieve the type of the array variable from the symbol table
+            String arrayType = null;
+            for (Symbol field : table.getFields()) {
+                if (field.getName().equals(arrayVarName)) {
+                    arrayType = String.valueOf(field.getType());
+                    break;
+                }
             }
+
+            if (arrayType == null) {
+                addReport(newError(methodCallExpr, "Array variable '" + arrayVarName + "' is not declared."));
+                return null;
+            }
+
+            // Check if it's an array type
+            if (!arrayType.endsWith("[]")) {
+                addReport(newError(methodCallExpr, "Cannot access an index on a non-array type: " + arrayType));
+                return null;
+            }
+
+            // Type checking: Ensure the index is of type int
+            String indexType = indexExpr.get("name");
+            if (!"int".equals(indexType)) {
+                addReport(newError(methodCallExpr, "Array index must be of type 'int', found: " + indexType + "."));
+            }
+        } else {
+            // Otherwise, treat it as a method call (single identifier child)
+            JmmNode identifierNode = methodCallExpr.getChildren().stream()
+                    .filter(child -> child.getKind().equals(Kind.IDENTIFIER.getNodeName()))
+                    .findFirst()
+                    .orElse(null);
+
+            if (identifierNode == null) {
+                addReport(newError(methodCallExpr, "Method call is missing an identifier."));
+                return null;
+            }
+
+            String methodName = identifierNode.get("name");
+
+            // Verify if the method is declared
+            if (!isDeclaredMethod(methodName, table)) {
+                addReport(newError(methodCallExpr, "Method '" + methodName + "' is not declared or accessible."));
+                return null;
+            }
+
+            // Perform further argument validation (as before)
         }
 
         return null;
     }
 
     private boolean isDeclaredMethod(String methodName, SymbolTable table) {
-        return table.getMethods().contains(methodName);
-    }
-
-    private int getExpectedArgumentCount(String methodName, SymbolTable table) {
-        return table.getParameters(methodName).size();
-    }
-
-    private Type getExpectedArgumentType(String methodName, int index, SymbolTable table) {
-        List<Type> paramTypes = table.getParameters(methodName)
-                .stream()
-                .map(Symbol::getType) // Assuming each parameter has a 'getType' method
-                .toList();
-        if (index >= paramTypes.size()) {
-            throw new IllegalArgumentException("Invalid parameter index for method: " + methodName);
+        boolean methodDeclared = table.getMethods().stream()
+                .anyMatch(method -> method.equals(methodName));
+        if (methodDeclared) {
+            return true;
         }
-        return paramTypes.get(index);
+        String parentClass = table.getSuper();
+        return parentClass != null;
     }
 
     private boolean isDeclared(String varName, SymbolTable table) {

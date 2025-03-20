@@ -16,6 +16,7 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
         addVisit(Kind.STMT, this::visitStmt);
         addVisit(Kind.METHOD_DECL, this::visitMethodDecl);
         addVisit(Kind.PRIMARY, this::visitPrimaryExpr);
+        addVisit(Kind.ARRAY_LITERAL, this::visitArrayLiteral);
     }
 
     private Void visitBinaryExpr(JmmNode binaryExpr, SymbolTable table) {
@@ -27,23 +28,23 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
         Type rightType = typeUtils.getExprType(binaryExpr.getChild(1));
 
         if (leftType == null || rightType == null) {
-            addReport(newError(binaryExpr, "Uma ou ambas as variáveis são desconhecidas."));
+            addReport(newError(binaryExpr, "One or both variables are unknown."));
             return null;
         }
 
         if (op.matches("[+\\\\*/]")) {
             if (leftType.isArray() || rightType.isArray()) {
                 // Handle case where one of the operands is an array
-                addReport(newError(binaryExpr, "Não é possível somar um array com um tipo primitivo."));
+                addReport(newError(binaryExpr, "Cannot sum an array with a primitive type."));
             } else {
                 // Both operands must be integers for arithmetic operations
                 if (!leftType.getName().equals("int") || !rightType.getName().equals("int")) {
-                    addReport(newError(binaryExpr, "Operações aritméticas requerem operandos inteiros."));
+                    addReport(newError(binaryExpr, "Arithmetic operations require integer operands."));
                 }
             }
         } else if (op.matches("[<>=!]") || op.equals("&&")) {
             if (!leftType.getName().equals(rightType.getName())) {
-                addReport(newError(binaryExpr, "Operadores requerem operandos do mesmo tipo."));
+                addReport(newError(binaryExpr, "Operators require operands of the same type."));
             }
         }
 
@@ -59,36 +60,70 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
         String stmtKind = stmt.getKind();
 
         // Check for assignment statements (e.g., x = y)
-        if (stmtKind.equals(Kind.ASSIGNMENT.getNodeName())) {
-            JmmNode firstChild = stmt.getChild(0);
-            if (Kind.check(firstChild, Kind.IDENTIFIER)) {
-                String varName = firstChild.get("name");
-                JmmNode methodNode = stmt.getAncestor(Kind.METHOD_DECL).orElse(null);
-                String methodName = (methodNode != null) ? methodNode.get("name") : null;
+        if (stmtKind.equals(Kind.ASSIGN_STMT.getNodeName())) {
+            // Retrieve variable name from attributes
+            if (!stmt.hasAttribute("name")) {
+                addReport(newError(stmt, "Internal error: ASSIGN_STMT no variable name."));
+                return null;
+            }
 
-                // Check if the variable exists in the local variables symbol table
-                Type varType = table.getLocalVariables(methodName).stream()
-                        .filter(var -> var.getName().equals(varName))
-                        .map(Symbol::getType)
-                        .findFirst()
-                        .orElse(null);
+            String varName = stmt.get("name");
 
-                if (varType == null) {
-                    addReport(newError(stmt, "Variável " + varName + " não declarada no escopo."));
-                    return null;
+            // Retrieve assigned value node (should be the first and only child)
+            if (stmt.getNumChildren() != 1) {
+                addReport(newError(stmt, "Internal error: ASSIGN_STMT must have exactly one child (assigned expression)."));
+                return null;
+            }
+
+            JmmNode valueNode = stmt.getChild(0);
+
+            // Retrieve the expected type of the variable
+            JmmNode methodNode = stmt.getAncestor(Kind.METHOD_DECL).orElse(null);
+            String methodName = (methodNode != null) ? methodNode.get("name") : null;
+
+            Type varType = table.getLocalVariables(methodName).stream()
+                    .filter(var -> var.getName().equals(varName))
+                    .map(Symbol::getType)
+                    .findFirst()
+                    .orElse(null);
+
+            if (varType == null) {
+                addReport(newError(stmt, "Variable " + varName + " not in scope."));
+                return null;
+            }
+
+            // Get assigned expression type
+            Type assignedType = typeUtils.getExprType(valueNode);
+
+            // Handle varargs assignment
+            if (assignedType != null) {
+                // If assigned type is the Varargs class, get the type of the element (int)
+                if (assignedType.getName().equals("Varargs")) {
+                    assignedType = new Type("int", false); // The assigned type should be int, not Varargs
                 }
 
-                if (stmt.getNumChildren() > 1) {
-                    Type assignedType = typeUtils.getExprType(stmt.getChild(1));
-
-                    // Check if the assigned type matches the variable's type
-                    if (assignedType != null && !varType.equals(assignedType)) {
-                        addReport(newError(stmt, "Incompatibilidade de tipos: não é possível atribuir " + assignedType.getName() + " a " + varType.getName() + "."));
+                // Validate type compatibility
+                if (!varType.equals(assignedType)) {
+                    boolean bothAreClasses = isNotPrimitive(varType) && isNotPrimitive(assignedType);
+                    if (bothAreClasses) {
+                        // Check if the assigned type is compatible with the variable type (either the same class or a subclass)
+                        if (!isAssignableTo(varType, assignedType, table)) {
+                            addReport(newError(stmt, "Error: type " + assignedType.getName() + " cannot be assigned to " + varType.getName() + "."));
+                        }
+                        return null; // Allow assignment between compatible class types
                     }
-                } else {
-                    addReport(newError(stmt, "A atribuição está mal formada, faltando o valor para a variável."));
+
+                    // Handle primitive type mismatch
+                    if (varType.getName().equals("boolean") && assignedType.getName().equals("int")) {
+                        addReport(newError(stmt, "Error: Cannot assign an integer to a boolean."));
+                    } else {
+                        addReport(newError(stmt, "Type mismatch: cannot assign "
+                                + assignedType.getName() + " to " + varType.getName() + "."));
+                    }
                 }
             }
+
+            return null;
         }
 
         // Check if the statement is a conditional expression (for if and while)
@@ -96,7 +131,7 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
             Type conditionType = typeUtils.getExprType(stmt.getChild(0));
 
             if (conditionType == null || (!conditionType.isArray() && !conditionType.getName().equals("boolean"))) {
-                addReport(newError(stmt, "Expressões condicionais devem retornar um booleano."));
+                addReport(newError(stmt, "Conditional expressions must return a boolean."));
             }
         }
 
@@ -106,7 +141,7 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
 
             // Ensure the condition is boolean
             if (conditionType == null || !conditionType.getName().equals("boolean")) {
-                addReport(newError(stmt, "Condição do while deve ser do tipo booleano."));
+                addReport(newError(stmt, "While condition must be of boolean type."));
             }
         }
 
@@ -120,13 +155,40 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
         return null;
     }
 
+    private boolean isNotPrimitive(Type type) {
+        return !type.getName().equals("int") && !type.getName().equals("boolean");
+    }
+
+    private boolean isAssignableTo(Type varType, Type assignedType, SymbolTable table) {
+        if (varType.equals(assignedType)) {
+            return true; // Direct match is assignable
+        }
+
+        String targetTypeName = varType.getName();
+        String assignedTypeName = assignedType.getName();
+
+        if (table.getImports().contains("[" + targetTypeName + "]") && table.getImports().contains("[" + assignedTypeName + "]")) {
+            return true;
+        }
+
+        while (assignedTypeName != null) {
+            if (assignedTypeName.equals(targetTypeName)) {
+                return true;
+            }
+
+            assignedTypeName = table.getSuper();
+        }
+
+        return false;
+    }
+
     private Void visitPrimaryExpr(JmmNode primaryExpr, SymbolTable table) {
         TypeUtils typeUtils = new TypeUtils(table);
         Type type = typeUtils.getExprType(primaryExpr);
 
         // Handle case where the type cannot be determined
         if (type == null) {
-            addReport(newError(primaryExpr, "Tipo desconhecido para expressão primária."));
+            addReport(newError(primaryExpr, "Unknown type for primary expression."));
         }
 
         // If it's a variable, check if it exists in the symbol table
@@ -146,7 +208,7 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
             }
 
             if (varType == null) {
-                addReport(newError(primaryExpr, "Variável " + varName + " não declarada no escopo."));
+                addReport(newError(primaryExpr, "Variable " + varName + " not in scope."));
             }
         }
 
@@ -171,11 +233,11 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
 
                     // Check if returnType or exprType is null and report the error
                     if (returnType == null || exprType == null) {
-                        addReport(newError(possibleReturnExpr, "Tipo de retorno ou expressão nulo."));
+                        addReport(newError(possibleReturnExpr, "Void return type or expression."));
                     }
                     // Check if returnType does not match exprType
                     else if (!returnType.equals(exprType)) {
-                        addReport(newError(possibleReturnExpr, "Incompatibilidade de tipo no retorno: esperado " + returnType.getName() + " mas encontrado " + exprType.getName() + "."));
+                        addReport(newError(possibleReturnExpr, "Type mismatch on return: expected " + returnType.getName() + " but found " + exprType.getName() + "."));
                     }
                 }
             }
@@ -184,4 +246,22 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
         return null;
     }
 
+    public Void visitArrayLiteral(JmmNode expr, SymbolTable table) {
+        TypeUtils typeUtils = new TypeUtils(table);
+        Type firstElementType = typeUtils.getExprType(expr.getChild(0));
+
+        if (firstElementType == null) {
+            addReport(newError(expr, "Type of first element of literal array unknown."));
+        }
+
+        for (int i = 1; i < expr.getChildren().size(); i++) {
+            JmmNode element = expr.getChild(i);
+            Type elementType = typeUtils.getExprType(element);
+
+            if (!elementType.equals(firstElementType)) {
+                addReport(newError(element, "Array literal element has incompatible type."));
+            }
+        }
+        return null;
+    }
 }

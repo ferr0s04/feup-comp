@@ -36,7 +36,7 @@ public enum Kind {
     BLOCK_STMT,
     IF_STMT,
     RETURN_STMT,
-    ASSIGNMENT;
+    ASSIGN_STMT;
 
     private final String name;
 
