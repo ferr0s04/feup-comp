@@ -32,8 +32,14 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
         }
 
         if (op.matches("[+\\\\*/]")) {
-            if (!leftType.getName().equals("int") || !rightType.getName().equals("int")) {
-                addReport(newError(binaryExpr, "Operações aritméticas requerem operandos inteiros."));
+            if (leftType.isArray() || rightType.isArray()) {
+                // Handle case where one of the operands is an array
+                addReport(newError(binaryExpr, "Não é possível somar um array com um tipo primitivo."));
+            } else {
+                // Both operands must be integers for arithmetic operations
+                if (!leftType.getName().equals("int") || !rightType.getName().equals("int")) {
+                    addReport(newError(binaryExpr, "Operações aritméticas requerem operandos inteiros."));
+                }
             }
         } else if (op.matches("[<>=!]") || op.equals("&&")) {
             if (!leftType.getName().equals(rightType.getName())) {
