@@ -30,7 +30,8 @@ public enum Kind {
     IDENTIFIER,
     THIS_REFERENCE,
     IMPORT_DECL,
-    NEW_OBJECT;
+    NEW_OBJECT,
+    NEW_ARRAY;
 
     private final String name;
 

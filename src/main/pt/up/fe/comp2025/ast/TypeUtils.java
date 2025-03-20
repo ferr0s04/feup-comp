@@ -83,11 +83,12 @@ public class TypeUtils {
                 String className = table.getClassName();
                 yield new Type(className, false);
             }
+            case NEW_ARRAY -> {
+                yield new Type("int", true);
+            }
             default -> throw new IllegalArgumentException("Unsupported expression type: " + kind);
         };
     }
-
-
 
     /**
      * Infers the type of a primary expression (literal, identifier, etc.).

@@ -92,7 +92,7 @@ expr
     : '(' expr ')'                                  # Primary
     | '[' (expr (',' expr)*)? ']'                   # ArrayLiteral
     | '!' expr                                      # UnaryOp
-    | NEW 'int' '[' expr ']'                        # Primary
+    | NEW 'int' '[' expr ']'                        # NewArray
     | NEW name=ID '(' ')'                           # NewObject
     | expr '.' LENGTH                               # Primary
     | expr '.' name=ID '(' (expr (',' expr)*)? ')'  # AccessOrCall

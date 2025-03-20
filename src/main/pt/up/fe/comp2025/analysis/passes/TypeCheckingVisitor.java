@@ -86,7 +86,7 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
         if (stmt.getKind().equals(Kind.STMT.getNodeName()) && stmt.getNumChildren() > 0) {
             Type conditionType = typeUtils.getExprType(stmt.getChild(0));
 
-            if (conditionType == null || !conditionType.getName().equals("boolean")) {
+            if (conditionType == null || (!conditionType.isArray() && !conditionType.getName().equals("boolean"))) {
                 addReport(newError(stmt, "Expressões condicionais devem retornar um booleano."));
             }
         }
