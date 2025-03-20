@@ -50,44 +50,64 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
         }
 
         TypeUtils typeUtils = new TypeUtils(table);
-        JmmNode firstChild = stmt.getChild(0);
+        String stmtKind = stmt.getKind();
 
-        // Check if the statement involves an identifier (variable)
-        if (Kind.check(firstChild, Kind.IDENTIFIER)) {
-            String varName = firstChild.get("name");
-            JmmNode methodNode = stmt.getAncestor(Kind.METHOD_DECL).orElse(null);
-            String methodName = (methodNode != null) ? methodNode.get("name") : null;
+        // Check for assignment statements (e.g., x = y)
+        if (stmtKind.equals(Kind.ASSIGNMENT.getNodeName())) {
+            JmmNode firstChild = stmt.getChild(0);
+            if (Kind.check(firstChild, Kind.IDENTIFIER)) {
+                String varName = firstChild.get("name");
+                JmmNode methodNode = stmt.getAncestor(Kind.METHOD_DECL).orElse(null);
+                String methodName = (methodNode != null) ? methodNode.get("name") : null;
 
-            // Check if the variable exists in the local variables symbol table
-            Type varType = table.getLocalVariables(methodName).stream()
-                    .filter(var -> var.getName().equals(varName))
-                    .map(Symbol::getType)
-                    .findFirst()
-                    .orElse(null);
+                // Check if the variable exists in the local variables symbol table
+                Type varType = table.getLocalVariables(methodName).stream()
+                        .filter(var -> var.getName().equals(varName))
+                        .map(Symbol::getType)
+                        .findFirst()
+                        .orElse(null);
 
-            if (varType == null) {
-                addReport(newError(stmt, "Variável " + varName + " não declarada no escopo."));
-                return null;
-            }
-
-            if (stmt.getNumChildren() > 1) {
-                Type assignedType = typeUtils.getExprType(stmt.getChild(1));
-
-                // Check if the assigned type matches the variable's type
-                if (assignedType != null && !varType.equals(assignedType)) {
-                    addReport(newError(stmt, "Incompatibilidade de tipos: não é possível atribuir " + assignedType.getName() + " a " + varType.getName() + "."));
+                if (varType == null) {
+                    addReport(newError(stmt, "Variável " + varName + " não declarada no escopo."));
+                    return null;
                 }
-            } else {
-                addReport(newError(stmt, "A atribuição está mal formada, faltando o valor para a variável."));
+
+                if (stmt.getNumChildren() > 1) {
+                    Type assignedType = typeUtils.getExprType(stmt.getChild(1));
+
+                    // Check if the assigned type matches the variable's type
+                    if (assignedType != null && !varType.equals(assignedType)) {
+                        addReport(newError(stmt, "Incompatibilidade de tipos: não é possível atribuir " + assignedType.getName() + " a " + varType.getName() + "."));
+                    }
+                } else {
+                    addReport(newError(stmt, "A atribuição está mal formada, faltando o valor para a variável."));
+                }
             }
         }
 
-        // Check if the statement is a conditional expression
-        if (stmt.getKind().equals(Kind.STMT.getNodeName()) && stmt.getNumChildren() > 0) {
+        // Check if the statement is a conditional expression (for if and while)
+        if (stmtKind.equals(Kind.IF_STMT.getNodeName()) || stmtKind.equals(Kind.WHILE_STMT.getNodeName())) {
             Type conditionType = typeUtils.getExprType(stmt.getChild(0));
 
             if (conditionType == null || (!conditionType.isArray() && !conditionType.getName().equals("boolean"))) {
                 addReport(newError(stmt, "Expressões condicionais devem retornar um booleano."));
+            }
+        }
+
+        // Special handling for WHILE statement condition check
+        if (stmtKind.equals(Kind.WHILE_STMT.getNodeName())) {
+            Type conditionType = typeUtils.getExprType(stmt.getChild(0));
+
+            // Ensure the condition is boolean
+            if (conditionType == null || !conditionType.getName().equals("boolean")) {
+                addReport(newError(stmt, "Condição do while deve ser do tipo booleano."));
+            }
+        }
+
+        // Handle block statement: block is just a set of statements
+        if (stmtKind.equals(Kind.BLOCK_STMT.getNodeName())) {
+            for (JmmNode child : stmt.getChildren()) {
+                visitStmt(child, table); // Recursively visit statements inside the block
             }
         }
 

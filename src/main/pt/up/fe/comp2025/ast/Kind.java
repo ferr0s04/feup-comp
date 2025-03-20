@@ -31,7 +31,12 @@ public enum Kind {
     THIS_REFERENCE,
     IMPORT_DECL,
     NEW_OBJECT,
-    NEW_ARRAY;
+    NEW_ARRAY,
+    WHILE_STMT,
+    BLOCK_STMT,
+    IF_STMT,
+    RETURN_STMT,
+    ASSIGNMENT;
 
     private final String name;
 
