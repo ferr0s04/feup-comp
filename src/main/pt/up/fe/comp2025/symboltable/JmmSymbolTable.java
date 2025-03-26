@@ -109,5 +109,4 @@ public class JmmSymbolTable extends AJmmSymbolTable {
 
         throw new IllegalArgumentException("Unknown variable: " + varName);
     }
-
 }

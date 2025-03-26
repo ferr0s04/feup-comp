@@ -131,8 +131,6 @@ public class JmmSymbolTableBuilder {
         }
     }
 
-
-
     private Type extractType(JmmNode typeNode) {
         if (typeNode.hasAttribute("name")) {
             // Custom types (e.g., class names)
@@ -149,12 +147,10 @@ public class JmmSymbolTableBuilder {
         }
     }
 
-
     private Symbol extractSymbol(JmmNode node) {
         if (node.getNumChildren() == 0) {
             throw new IllegalArgumentException("Variable declaration node has no children.");
         }
-
         // Ensure the first child is a valid type node
         JmmNode typeNode = node.getChild(0);
         Type type = extractType(typeNode);
@@ -162,7 +158,6 @@ public class JmmSymbolTableBuilder {
         String name = node.get("name");
         return new Symbol(type, name);
     }
-
 
     private String extractImport(JmmNode importNode) {
         StringBuilder importPath = new StringBuilder(importNode.get("name"));

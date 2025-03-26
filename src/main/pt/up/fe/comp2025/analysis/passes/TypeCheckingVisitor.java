@@ -106,11 +106,10 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
                 if (!varType.equals(assignedType)) {
                     boolean bothAreClasses = isNotPrimitive(varType) && isNotPrimitive(assignedType);
                     if (bothAreClasses) {
-                        // Check if the assigned type is compatible with the variable type (either the same class or a subclass)
                         if (!isAssignableTo(varType, assignedType, table)) {
                             addReport(newError(stmt, "Error: type " + assignedType.getName() + " cannot be assigned to " + varType.getName() + "."));
                         }
-                        return null; // Allow assignment between compatible class types
+                        return null;
                     }
 
                     // Handle primitive type mismatch
@@ -135,7 +134,7 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
             }
         }
 
-        // Special handling for WHILE statement condition check
+        // While statements
         if (stmtKind.equals(Kind.WHILE_STMT.getNodeName())) {
             Type conditionType = typeUtils.getExprType(stmt.getChild(0));
 
@@ -145,13 +144,12 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
             }
         }
 
-        // Handle block statement: block is just a set of statements
+        // Block statement (set of statements)
         if (stmtKind.equals(Kind.BLOCK_STMT.getNodeName())) {
             for (JmmNode child : stmt.getChildren()) {
-                visitStmt(child, table); // Recursively visit statements inside the block
+                visitStmt(child, table);
             }
         }
-
         return null;
     }
 
@@ -178,7 +176,6 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
 
             assignedTypeName = table.getSuper();
         }
-
         return false;
     }
 
@@ -211,7 +208,6 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
                 addReport(newError(primaryExpr, "Variable " + varName + " not in scope."));
             }
         }
-
         return null;
     }
 
