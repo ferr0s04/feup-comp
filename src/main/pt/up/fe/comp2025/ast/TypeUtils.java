@@ -218,8 +218,7 @@ public class TypeUtils {
     }
 
     private boolean isVarargs(Type type) {
-        // You can check if the type is a varargs by its name or other properties
-        return "Varargs".equals(type.getName());
+        return type.getName().contains("Varargs");
     }
 
     /**
