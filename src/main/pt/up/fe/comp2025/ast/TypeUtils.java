@@ -159,8 +159,8 @@ public class TypeUtils {
             return newBooleanType();
         } else if (value.matches("-?\\d+")) { // Handle integers
             return newIntType();
-        } else if (literalNode.getKind().equals("STRING")) { // Match STRING token kind
-            return new Type("String", false); // Handle string literals
+        } else if (literalNode.getKind().equals("Literal")) {
+            return new Type("String", false);
         } else {
             throw new IllegalArgumentException("Unsupported literal type: " + value);
         }
