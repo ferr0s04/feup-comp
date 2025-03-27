@@ -1,0 +1,9 @@
+class ReturnArrayDirectly {
+    public static void main(String[] args) {
+
+    }
+
+    public int[] foo() {
+        return [2, 5, 7];
+    }
+}

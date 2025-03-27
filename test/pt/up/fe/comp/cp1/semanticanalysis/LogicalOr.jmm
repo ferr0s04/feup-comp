@@ -1,0 +1,16 @@
+class LogicalOr {
+
+    public static void main(String[] args) {
+
+    }
+
+    public boolean foo() {
+        boolean a;
+        boolean b;
+
+        a = false;
+        b = true;
+
+        return a || b;
+    }
+}

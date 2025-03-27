@@ -36,14 +36,21 @@ public enum Kind {
     BLOCK_STMT,
     IF_STMT,
     RETURN_STMT,
-    ASSIGN_STMT;
-
+    ASSIGN_STMT,
+    INCREMENT,
+    STRING;
     private final String name;
 
+    /**
+     * Get name
+     */
     private Kind(String name) {
         this.name = name;
     }
 
+    /**
+     * Set kind name
+     */
     private Kind() {
         this.name = SpecsStrings.toCamelCase(name(), "_", true);
     }
@@ -82,6 +89,9 @@ public enum Kind {
         return name;
     }
 
+    /**
+     * Get node name in string format
+     */
     @Override
     public String toString() {
         return getNodeName();

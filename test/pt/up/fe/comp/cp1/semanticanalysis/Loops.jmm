@@ -1,0 +1,29 @@
+class Loops {
+    public static void main(String[] args) {
+    }
+
+    public int foo() {
+        int x;
+        int result;
+        int sum;
+        int i;
+
+        x = 3;
+
+        if (x == 1) {
+            result = 10;
+        } else if (x == 2) {
+            result = 20;
+        } else {
+            result = 30;
+        }
+
+        sum = 0;
+
+        for (i = 1; i <= 3; i++) {
+            sum += i;
+        }
+
+        return result + sum;
+    }
+}

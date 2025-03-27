@@ -46,6 +46,13 @@ public class TypeUtils {
     }
 
     /**
+     * Checks if the type is varargs
+     */
+    private boolean isVarargs(Type type) {
+        return type.getName().contains("Varargs");
+    }
+
+    /**
      * Converts a JmmNode representing a type into a {@link Type} object.
      * Ensures the node has a "name" attribute before converting.
      */
@@ -67,7 +74,7 @@ public class TypeUtils {
         Kind kind = Kind.fromString(expr.getKind());
 
         return switch (kind) {
-            case LITERAL -> inferLiteralType(expr);
+            case LITERAL, STRING -> inferLiteralType(expr);
             case BINARY_OP -> inferBinaryOpType(expr);
             case IDENTIFIER -> lookupVariableType(expr);
             case ACCESS_OR_CALL -> inferArrayAccessType(expr);
@@ -89,10 +96,18 @@ public class TypeUtils {
             case ARRAY_LITERAL -> {
                 JmmNode firstElement = expr.getChild(0);
                 Type firstElementType = getExprType(firstElement);
-
                 yield new Type(firstElementType.getName(), true);
             }
-
+            case INCREMENT -> { // New case for Increment expressions
+                // In an Increment expression, the child is the identifier
+                Type idType = getExprType(expr.getChild(0));
+                if (!idType.getName().equals("int")) {
+                    throw new IllegalArgumentException(
+                            "Increment/decrement operator requires int type, but found: " + idType.getName()
+                    );
+                }
+                yield idType;
+            }
             default -> throw new IllegalArgumentException("Unsupported expression type: " + kind);
         };
     }
@@ -118,16 +133,16 @@ public class TypeUtils {
             return lookupVariableType(primaryNode);
         }
 
-        // Handle object creation (e.g., new ClassName())
+        // Handle object creation (example: new ClassName())
         if (primaryNode.getKind().equals("NewObject")) {
             String className = primaryNode.get("name");
-            return new Type(className, false); // Assuming "false" for non-array objects
+            return new Type(className, false);
         }
 
-        // Handle array creation (e.g., new int[10])
+        // Handle array creation (example: new int[7])
         if (primaryNode.getKind().equals("NewArray")) {
             String elementType = primaryNode.get("type");
-            return new Type(elementType, true); // Mark it as an array
+            return new Type(elementType, true);
         }
 
         // If no case matches, throw an error
@@ -142,15 +157,16 @@ public class TypeUtils {
 
         if (value.equals("true") || value.equals("false")) {
             return newBooleanType();
-        } else if (value.matches("-?\\d+")) {
-            return newIntType(); // Handle integer literals
-        } else if (value.matches("\".*\"")) {
-            // Handle string literals (if applicable)
-            return new Type("String", false);
+        } else if (value.matches("-?\\d+")) { // Handle integers
+            return newIntType();
+        } else if (literalNode.getKind().equals("STRING")) { // Match STRING token kind
+            return new Type("String", false); // Handle string literals
         } else {
             throw new IllegalArgumentException("Unsupported literal type: " + value);
         }
     }
+
+
 
     /**
      * Infers the result type of a binary operation based on the operator.
@@ -162,16 +178,22 @@ public class TypeUtils {
 
         String op = expr.get("op");
 
-        if (op.equals("&&") || op.equals("||")) {
+        Type leftType = getExprType(expr.getChild(0));
+        Type rightType = getExprType(expr.getChild(1));
+
+        if (op.equals("+") && (leftType.getName().equals("String") || rightType.getName().equals("String"))) {
+            return new Type("String", false); // String concatenation
+        } else if (op.equals("&&") || op.equals("||") || op.equals("==")) {
             return newBooleanType();
-        } else if (op.matches("[+\\-*/]")) {
+        } else if (op.matches("[+*/-]|(\\+=|-=|\\*=|/=)")) {
             return newIntType();
-        } else if (op.matches("[<>=!]")) {
+        } else if (op.matches("[<>=!]=?")) {
             return newBooleanType();
         }
 
         throw new IllegalArgumentException("Unknown binary operator: " + op);
     }
+
 
     /**
      * Retrieves the type of a variable by looking it up in the symbol table.
@@ -205,6 +227,12 @@ public class TypeUtils {
         // Get the type of the array expression
         Type arrayExprType = getExprType(arrayNode.getChild(0));
 
+        System.out.println("arrayNode " + arrayNode);
+        System.out.println("arrayExprType " + arrayExprType);
+        System.out.println("isVarargs(arrayExprType) " + isVarargs(arrayExprType));
+        System.out.println("arrayExprType.isArray " + arrayExprType.isArray());
+
+
         // Check if the expression is an array or varargs
         if (!arrayExprType.isArray() && !isVarargs(arrayExprType)) {
             throw new IllegalArgumentException("Attempted indexing on a non-array or non-varargs type: " + arrayExprType);
@@ -215,10 +243,6 @@ public class TypeUtils {
 
         // If it's varargs, return the element type
         return new Type(arrayExprType.getName(), false);
-    }
-
-    private boolean isVarargs(Type type) {
-        return type.getName().contains("Varargs");
     }
 
     /**

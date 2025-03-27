@@ -1,0 +1,9 @@
+class ArrayInitWrong3 {
+
+    public int foo() {
+        int[2] a;
+        a = [true, false];
+        return 2;
+    }
+
+}

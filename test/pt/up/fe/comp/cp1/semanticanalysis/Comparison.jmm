@@ -1,0 +1,54 @@
+class ComparisonTest {
+
+    public static void main(String[] args) {
+
+    }
+
+    public boolean testLessThan() {
+        int a;
+        int b;
+        a = 5;
+        b = 10;
+        return a < b;
+    }
+
+    public boolean testGreaterThan() {
+        int x;
+        int y;
+        x = 7;
+        y = 14;
+        return x > y;
+    }
+
+    public boolean testLessThanOrEqual() {
+        int t;
+        int l;
+        t = 5;
+        l = 5;
+        return t <= l;
+    }
+
+    public boolean testGreaterThanOrEqual() {
+        int x;
+        int y;
+        x = 3;
+        y = 7;
+        return x >= y;
+    }
+
+    public boolean testEqual() {
+        int m;
+        int n;
+        m = 10;
+        n = 10;
+        return m == n;
+    }
+
+    public boolean testNotEqual() {
+        int p;
+        int q;
+        p = 20;
+        q = 15;
+        return p != q;
+    }
+}

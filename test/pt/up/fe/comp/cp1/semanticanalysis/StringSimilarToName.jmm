@@ -1,0 +1,9 @@
+class StringSimilarToName {
+    public static void main(String[] args) {}
+
+    public String foo() {
+        String a;
+        a = "aaa";
+        return a;
+    }
+}

@@ -31,6 +31,8 @@ WS : [ \t\n\r\f]+ -> skip ;
 LINE_COMMENT : '//' ~[\r\n]* -> skip ;
 BLOCK_COMMENT : '/*' .*? '*/' -> skip ;
 
+STRING : '"' (~["\r\n])* '"' ;
+
 program
     : stmt + EOF
     | (importDecl)* classDecl EOF
@@ -89,7 +91,8 @@ stmt
     ;
 
 expr
-    : '(' expr ')'                                  # Primary
+    : ('++' | '--') expr                            # Increment
+    | '(' expr ')'                                  # Primary
     | '[' (expr (',' expr)*)? ']'                   # ArrayLiteral
     | '!' expr                                      # UnaryOp
     | NEW 'int' '[' expr ']'                        # NewArray
@@ -102,13 +105,12 @@ expr
     | expr op=('<' | '>') expr                      #BinaryOp
     | expr op=('<=' | '>=' | '==' | '!=' | '+=' | '-=' | '*=' | '/=') expr #BinaryOp
     | expr op='&&' expr                             # BinaryOp
-    | expr op='||' expr #BinaryOp
+    | expr op='||' expr                             # BinaryOp
     | value=INTEGER                                 # Literal
     | value=TRUE                                    # Literal
     | value=FALSE                                   # Literal
+    | value=STRING                                  # Literal
     | name=ID                                       # Identifier
-    | name=ID op=('++' | '--') #Increment
+    | expr ('++' | '--')                            # Increment
     | THIS                                          # ThisReference
     ;
-
-

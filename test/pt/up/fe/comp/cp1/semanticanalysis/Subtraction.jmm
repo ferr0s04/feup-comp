@@ -1,0 +1,15 @@
+class Subtraction {
+
+    public static void main(String[] args) {
+
+    }
+
+    public int foo() {
+        int a;
+        a = 5;
+
+        a -= 2;
+
+        return a;
+    }
+}

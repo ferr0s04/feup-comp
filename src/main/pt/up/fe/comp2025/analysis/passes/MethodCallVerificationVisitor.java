@@ -2,9 +2,11 @@ package pt.up.fe.comp2025.analysis.passes;
 
 import pt.up.fe.comp.jmm.analysis.table.Symbol;
 import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
+import pt.up.fe.comp.jmm.analysis.table.Type;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp2025.analysis.AnalysisVisitor;
 import pt.up.fe.comp2025.ast.Kind;
+import pt.up.fe.comp2025.ast.TypeUtils;
 
 public class MethodCallVerificationVisitor extends AnalysisVisitor {
 
@@ -18,12 +20,18 @@ public class MethodCallVerificationVisitor extends AnalysisVisitor {
         addVisit(Kind.ACCESS_OR_CALL, this::visitMethodCallExpr);  // Fixed method call kind
     }
 
+    /**
+     * Stores the current method's name and whether it's static.
+     */
     private Void visitMethodDecl(JmmNode methodNode, SymbolTable table) {
         currentMethod = methodNode.get("name"); // Method name
         isStaticMethod = Boolean.parseBoolean(methodNode.getOptional("isStatic").orElse("false"));
         return null;
     }
 
+    /**
+     * Checks if the variable reference is valid in the current context
+     */
     private Void visitVarRefExpr(JmmNode varRefExpr, SymbolTable table) {
         String varName = varRefExpr.get("name");
 
@@ -35,6 +43,9 @@ public class MethodCallVerificationVisitor extends AnalysisVisitor {
         return null;
     }
 
+    /**
+     * Handles method call expressions by verifying different types of method calls: simple method call, array access, and more complex scenarios.
+     */
     private Void visitMethodCallExpr(JmmNode methodCallExpr, SymbolTable table) {
         // One child
         if (methodCallExpr.getChildren().size() == 1 && methodCallExpr.getChildren().get(0).getKind().equals(Kind.IDENTIFIER.getNodeName())) {
@@ -51,6 +62,17 @@ public class MethodCallVerificationVisitor extends AnalysisVisitor {
         else if (methodCallExpr.getChildren().size() == 2) {
             JmmNode arrayExpr = methodCallExpr.getChildren().get(0); // First child
             JmmNode indexExpr = methodCallExpr.getChildren().get(1); // Second child
+
+            TypeUtils typeUtils = new TypeUtils(table);
+            Type arrayExpressionType = typeUtils.getExprType(arrayExpr);
+
+            if (arrayExpressionType.isArray()) { // Only check indexing if it's an array
+                Type indexType = typeUtils.getExprType(indexExpr);
+                if (!indexType.getName().equals("int")) {
+                    addReport(newError(methodCallExpr, "Array index must be of type 'int'"));
+                }
+            }
+
 
             // Array access
             if (!indexExpr.getKind().equals(Kind.IDENTIFIER.getNodeName())) {
@@ -138,6 +160,9 @@ public class MethodCallVerificationVisitor extends AnalysisVisitor {
         return null;
     }
 
+    /**
+     * Verify the correctness of method calls in various scenarios (simple method call / array access / complex method call / unexpected children)
+     */
     private boolean isNotDeclaredMethod(String methodName, SymbolTable table) {
         // Check if the method exists in the current class
         boolean methodDeclared = table.getMethods().stream()
@@ -161,6 +186,9 @@ public class MethodCallVerificationVisitor extends AnalysisVisitor {
         return true;
     }
 
+    /**
+     * This function checks if a given variable is declared in the current method’s scope (local variables), in the class (fields), or in any imported classes.
+     */
     private boolean isDeclared(String varName, SymbolTable table) {
         return table.getLocalVariables(currentMethod).stream().anyMatch(var -> var.getName().equals(varName)) ||
                 table.getFields().stream().anyMatch(field -> field.getName().equals(varName)) ||

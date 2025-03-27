@@ -1,0 +1,13 @@
+class WrongTypes {
+
+    public static void main(String[] args) {
+
+    }
+
+    public boolean foo() {
+        int a;
+        a = true;
+
+        return a;
+    }
+}

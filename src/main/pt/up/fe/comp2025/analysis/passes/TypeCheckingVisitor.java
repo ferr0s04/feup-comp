@@ -17,8 +17,12 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
         addVisit(Kind.METHOD_DECL, this::visitMethodDecl);
         addVisit(Kind.PRIMARY, this::visitPrimaryExpr);
         addVisit(Kind.ARRAY_LITERAL, this::visitArrayLiteral);
+        addVisit(Kind.INCREMENT, this::visitUnaryExpr);
     }
 
+    /**
+     * This function checks and reports errors for binary expressions (arithmetic, comparison, etc.).
+     */
     private Void visitBinaryExpr(JmmNode binaryExpr, SymbolTable table) {
         TypeUtils typeUtils = new TypeUtils(table);
         String op = binaryExpr.get("op");
@@ -32,7 +36,7 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
             return null;
         }
 
-        if (op.matches("[+\\\\*/]")) {
+        if (op.matches("[+*/-]|(\\+=|-=|\\*=|/=)")) {
             if (leftType.isArray() || rightType.isArray()) {
                 // Handle case where one of the operands is an array
                 addReport(newError(binaryExpr, "Cannot sum an array with a primitive type."));
@@ -42,7 +46,7 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
                     addReport(newError(binaryExpr, "Arithmetic operations require integer operands."));
                 }
             }
-        } else if (op.matches("[<>=!]") || op.equals("&&")) {
+        } else if (op.matches("[<>=!]=?") || op.equals("&&") || op.equals("||")) {
             if (!leftType.getName().equals(rightType.getName())) {
                 addReport(newError(binaryExpr, "Operators require operands of the same type."));
             }
@@ -51,6 +55,9 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
         return null;
     }
 
+    /**
+     * This function handles statements like assignments, conditionals, and loops by checking type correctness.
+     */
     private Void visitStmt(JmmNode stmt, SymbolTable table) {
         if (stmt.getNumChildren() == 0) {
             return null;
@@ -153,10 +160,16 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
         return null;
     }
 
+    /**
+     * True if its not primitive (int or boolean)
+     */
     private boolean isNotPrimitive(Type type) {
         return !type.getName().equals("int") && !type.getName().equals("boolean");
     }
 
+    /**
+     * Checks if the assigned type is assignable to the variable's type.
+     */
     private boolean isAssignableTo(Type varType, Type assignedType, SymbolTable table) {
         if (varType.equals(assignedType)) {
             return true; // Direct match is assignable
@@ -179,6 +192,9 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
         return false;
     }
 
+    /**
+     * Handles primary expressions and validates their type and existence in the symbol table.
+     */
     private Void visitPrimaryExpr(JmmNode primaryExpr, SymbolTable table) {
         TypeUtils typeUtils = new TypeUtils(table);
         Type type = typeUtils.getExprType(primaryExpr);
@@ -211,6 +227,9 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
         return null;
     }
 
+    /*
+     * Validates the return type and expression type for method declarations.
+     */
     private Void visitMethodDecl(JmmNode methodDecl, SymbolTable table) {
         if (methodDecl.getNumChildren() == 0) {
             return null;
@@ -242,6 +261,9 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
         return null;
     }
 
+    /*
+     * Handles array literal expressions and checks if all elements are of the same type.
+     */
     public Void visitArrayLiteral(JmmNode expr, SymbolTable table) {
         TypeUtils typeUtils = new TypeUtils(table);
         Type firstElementType = typeUtils.getExprType(expr.getChild(0));
@@ -260,4 +282,43 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
         }
         return null;
     }
+
+    /*
+     * Handles unary expressions and validates the operand type (increment, decrement).
+     */
+    private Void visitUnaryExpr(JmmNode unaryExpr, SymbolTable table) {
+        TypeUtils typeUtils = new TypeUtils(table);
+
+        // Check if this is an increment/decrement expression
+        if (unaryExpr.getKind().equals("Increment")) {
+            // For an increment expression, the operand is the first (and only) child.
+            Type operandType = typeUtils.getExprType(unaryExpr.getChild(0));
+            if (!operandType.getName().equals("int")) {
+                addReport(newError(unaryExpr, "Increment/decrement operators require integer operands, but found: " + operandType.getName() + "."));
+            }
+            return null;
+        }
+
+        // For other unary expressions, retrieve the operator from the attribute "op"
+        String op = unaryExpr.get("op");
+        Type operandType = typeUtils.getExprType(unaryExpr.getChild(0));
+
+        if (operandType == null) {
+            addReport(newError(unaryExpr, "Unknown operand for unary expression."));
+            return null;
+        }
+
+        if (op.equals("++") || op.equals("--")) {
+            if (!operandType.getName().equals("int")) {
+                addReport(newError(unaryExpr, "Increment/decrement operators require integer operands."));
+            }
+        } else {
+            addReport(newError(unaryExpr, "Unknown unary operator: " + op));
+        }
+
+        return null;
+    }
+
+
+
 }

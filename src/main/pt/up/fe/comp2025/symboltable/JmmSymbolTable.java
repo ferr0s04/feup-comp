@@ -18,15 +18,7 @@ public class JmmSymbolTable extends AJmmSymbolTable {
     private final Map<String, List<Symbol>> params;
     private final Map<String, List<Symbol>> locals;
 
-    public JmmSymbolTable(String className,
-                          String superClass,
-                          List<String> imports,
-                          List<String> methods,
-                          Map<String, Type> returnTypes,
-                          Map<String, List<Symbol>> params,
-                          Map<String, List<Symbol>> locals,
-                          List<Symbol> fields) {
-
+    public JmmSymbolTable(String className, String superClass, List<String> imports, List<String> methods, Map<String, Type> returnTypes, Map<String, List<Symbol>> params, Map<String, List<Symbol>> locals, List<Symbol> fields) {
         this.className = className;
         this.superClass = superClass;
         this.imports = imports;

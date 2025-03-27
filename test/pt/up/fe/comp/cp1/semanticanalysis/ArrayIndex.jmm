@@ -1,0 +1,9 @@
+class ArrayIndex {
+    public static void main(String[] args) {}
+
+    public int foo() {
+        int[] a;
+        a = new int[2];
+        return a[1];
+    }
+}

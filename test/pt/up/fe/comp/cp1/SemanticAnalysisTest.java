@@ -174,5 +174,187 @@ public class SemanticAnalysisTest {
         System.out.println(result.getReports());
     }
 
+    // Additional tests
+    @Test
+    public void addition() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/Addition.jmm"));
+        TestUtils.noErrors(result);
+    }
 
+    @Test
+    public void subtraction() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/Subtraction.jmm"));
+        TestUtils.noErrors(result);
+    }
+
+    @Test
+    public void multiplication() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/Multiplication.jmm"));
+        TestUtils.noErrors(result);
+    }
+
+    @Test
+    public void division() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/Division.jmm"));
+        TestUtils.noErrors(result);
+    }
+
+    @Test
+    public void logicalOr() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/LogicalOr.jmm"));
+        TestUtils.noErrors(result);
+    }
+
+    @Test
+    public void postIncrement() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/PostIncrement.jmm"));
+        TestUtils.noErrors(result);
+    }
+
+    @Test
+    public void preIncrement() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/PreIncrement.jmm"));
+        TestUtils.noErrors(result);
+    }
+
+    @Test
+    public void postDecrement() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/PostDecrement.jmm"));
+        TestUtils.noErrors(result);
+    }
+
+    @Test
+    public void preDecrement() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/PreDecrement.jmm"));
+        TestUtils.noErrors(result);
+    }
+
+    @Test
+    public void comparison() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/Comparison.jmm"));
+        TestUtils.noErrors(result);
+    }
+
+    @Test
+    public void methodChaining() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/MethodChaining.jmm"));
+        TestUtils.noErrors(result);
+    }
+
+    @Test
+    public void arrayInitWrong3() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/ArrayInitWrong3.jmm"));
+        TestUtils.mustFail(result);
+        System.out.println(result.getReports());
+    }
+
+    @Test
+    public void stringSimilarToName() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/StringSimilarToName.jmm"));
+        TestUtils.noErrors(result);
+    }
+
+    @Test
+    public void arrayIndex() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/ArrayIndex.jmm"));
+        TestUtils.noErrors(result);
+    }
+
+    @Test
+    public void arrayIndexOutOfBounds() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/ArrayIndexOutOfBounds.jmm"));
+        TestUtils.mustFail(result);
+        System.out.println(result.getReports());
+    }
+
+    @Test
+    public void returnArrayDirectly() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/ReturnArrayDirectly.jmm"));
+        TestUtils.noErrors(result);
+    }
+
+    @Test
+    public void loops() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/Loops.jmm"));
+        TestUtils.noErrors(result);
+    }
+
+    @Test
+    public void boolReturn() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/BoolReturn.jmm"));
+        TestUtils.noErrors(result);
+    }
+
+    @Test
+    public void arrayIndexBoolean() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/ArrayIndexBoolean.jmm"));
+        TestUtils.mustFail(result);
+        System.out.println(result.getReports());
+    }
+
+    @Test
+    public void different() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/Different.jmm"));
+        TestUtils.noErrors(result);
+    }
+
+    @Test
+    public void wrongTypes() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/WrongTypes.jmm"));
+        TestUtils.mustFail(result);
+        System.out.println(result.getReports());
+    }
+
+    @Test
+    public void wrongTypes2() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/WrongTypes2.jmm"));
+        TestUtils.mustFail(result);
+        System.out.println(result.getReports());
+    }
+
+    @Test
+    public void wrongTypes3() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/WrongTypes3.jmm"));
+        TestUtils.mustFail(result);
+        System.out.println(result.getReports());
+    }
+
+    @Test
+    public void wrongTypes4() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/WrongTypes4.jmm"));
+        TestUtils.mustFail(result);
+        System.out.println(result.getReports());
+    }
+
+    @Test
+    public void wrongTypes5() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/WrongTypes5.jmm"));
+        TestUtils.mustFail(result);
+        System.out.println(result.getReports());
+    }
 }
