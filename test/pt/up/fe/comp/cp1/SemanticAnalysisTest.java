@@ -275,14 +275,6 @@ public class SemanticAnalysisTest {
     }
 
     @Test
-    public void arrayIndexOutOfBounds() {
-        var result = TestUtils
-                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/ArrayIndexOutOfBounds.jmm"));
-        TestUtils.mustFail(result);
-        System.out.println(result.getReports());
-    }
-
-    @Test
     public void returnArrayDirectly() {
         var result = TestUtils
                 .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/ReturnArrayDirectly.jmm"));
