@@ -48,7 +48,7 @@ public class MethodCallVerificationVisitor extends AnalysisVisitor {
      */
     private Void visitMethodCallExpr(JmmNode methodCallExpr, SymbolTable table) {
         // One child
-        if (methodCallExpr.getChildren().size() == 1 && methodCallExpr.getChildren().get(0).getKind().equals(Kind.IDENTIFIER.getNodeName())) {
+        if (methodCallExpr.getChildren().size() == 1/* && methodCallExpr.getChildren().get(0).getKind().equals(Kind.IDENTIFIER.getNodeName())*/) {
             JmmNode identifierNode = methodCallExpr.getChildren().getFirst();
 
             String methodName = identifierNode.get("name");
@@ -128,7 +128,7 @@ public class MethodCallVerificationVisitor extends AnalysisVisitor {
             }
         }
         // Method Call
-        else if (methodCallExpr.getChildren().size() > 2) {
+        else if (methodCallExpr.getChildren().size() >= 2) {
             JmmNode identifierNode = methodCallExpr.getChildren().stream()
                     .filter(child -> (child.getKind().equals(Kind.IDENTIFIER.getNodeName()) || child.getKind().equals(Kind.THIS_REFERENCE.getNodeName())))
                     .findFirst()
@@ -152,8 +152,7 @@ public class MethodCallVerificationVisitor extends AnalysisVisitor {
                 addReport(newError(methodCallExpr, "Method '" + methodName + "' is not declared or accessible."));
                 return null;
             }
-        }
-        else {
+        } else {
             addReport(newError(methodCallExpr, "Unexpected number of children for method call."));
         }
 

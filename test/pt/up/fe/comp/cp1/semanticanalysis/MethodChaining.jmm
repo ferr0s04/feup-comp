@@ -10,8 +10,8 @@ class MethodChaining extends A {
         MethodChaining a;
         a = new MethodChaining();
 
-        // Assume bar() is in A and bar2() is in bar()
-        a.bar().bar2();
+        // Assume bar() is in A and bar2() is in bar(), same with another()
+        a.bar().bar2().another();
 
         return 0;
     }
