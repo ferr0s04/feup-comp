@@ -15,7 +15,7 @@ Contains a reference implementation for the compiler project.
     - Statements (assignments, if-else, while, etc.)
     - Expressions (binary expressions, literals, method calls, etc.)
 - [X] Setup node names for the AST (e.g. “binaryOp” instead of “expr” for binary expressions)
-- [ ] Annotate nodes in the AST with relevant information (e.g. id, values, etc.)
+- [X] Annotate nodes in the AST with relevant information (e.g. id, values, etc.)
 - [x] Used interfaces: JmmParser, JmmNode and JmmParserResult
 
 **Symbol Table**
