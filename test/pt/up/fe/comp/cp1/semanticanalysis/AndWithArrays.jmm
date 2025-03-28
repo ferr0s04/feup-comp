@@ -1,0 +1,15 @@
+class AndWithArrays {
+
+    public static void main(String[] args) {
+
+    }
+
+    public boolean foo() {
+        int[] a;
+        int[] b;
+        a = [5,8,9];
+        b = [9,4,3];
+
+        return a && b;
+    }
+}

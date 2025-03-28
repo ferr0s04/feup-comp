@@ -1,0 +1,16 @@
+class FunctionTypes {
+    public static void main(String[] args) {}
+
+    public String foo() {
+        return "aa";
+    }
+    public int foo2() {
+        return 1;
+    }
+
+    public boolean foo3() {
+        return true;
+    }
+
+
+}

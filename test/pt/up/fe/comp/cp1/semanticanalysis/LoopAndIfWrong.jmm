@@ -1,0 +1,21 @@
+class LoopAndIfWrong {
+    public static void main(String[] args) {
+    }
+
+    public int foo() {
+        int x;
+        int result;
+        int sum;
+        int i;
+
+        x = 3;
+
+        if (for (i = 1; i <= 3; i++) {
+                        sum += i;
+                    }) {
+            result = 10;
+        }
+
+        return result + sum;
+    }
+}

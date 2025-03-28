@@ -1,0 +1,15 @@
+class GoodComparison {
+
+    public static void main(String[] args) {
+
+    }
+
+    public boolean foo() {
+        int a;
+        int b;
+        a = 5;
+        b = 3;
+
+        return a == b;
+    }
+}

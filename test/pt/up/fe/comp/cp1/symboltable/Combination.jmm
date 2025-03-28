@@ -1,0 +1,35 @@
+import A;
+import io;
+import List;
+
+class Combination extends A {
+
+    int field1;
+    boolean field2;
+    Combination field3;
+    Combination field4;
+
+
+    public int[] all(int a, boolean b, Combination maf){
+    	int[] c;
+        c = new int[1];
+        return c;
+    }
+
+    public int getField1(){
+        return field1;
+    }
+
+    public boolean getField2(){
+        return field2;
+    }
+
+    public Combination getField3(int a){
+        return field3;
+    }
+
+    public static void main(String[] args){
+
+    }
+
+}

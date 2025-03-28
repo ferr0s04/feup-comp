@@ -1,0 +1,15 @@
+class WrongComparison {
+
+    public static void main(String[] args) {
+
+    }
+
+    public boolean foo() {
+        int a;
+        boolean b;
+        a = 5;
+        b = true;
+
+        return a == b;
+    }
+}

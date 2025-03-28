@@ -39,6 +39,7 @@ public enum Kind {
     ASSIGN_STMT,
     INCREMENT,
     STRING;
+
     private final String name;
 
     /**

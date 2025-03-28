@@ -1,0 +1,15 @@
+class AndWithDifType {
+
+    public static void main(String[] args) {
+
+    }
+
+    public boolean foo() {
+        boolean a;
+        int b;
+        a = true;
+        b = 9;
+
+        return a && b;
+    }
+}

@@ -36,11 +36,23 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
             return null;
         }
 
-        if (op.matches("[+*/-]|(\\+=|-=|\\*=|/=)")) {
+        if (op.matches("[+]")){
+            if (leftType.isArray() || rightType.isArray()) {
+                // Handle case where one of the operands is an array
+                addReport(newError(binaryExpr, "Cannot make this operations on an array."));
+            } else {
+                // Both operands must be integers for arithmetic operations
+                if ((leftType.getName().equals("int") && rightType.getName().equals("int")) || (leftType.getName().equals("String") && rightType.getName().equals("String"))){
+                    // good
+                } else {
+                    addReport(newError(binaryExpr, "Arithmetic operations require integer operands."));
+                }
+            }
+        } else if (op.matches("[+*/-]|(\\+=|-=|\\*=|/=)|([<>]=)|[<>]")) { // For all this both left and right have to be int
 
             if (leftType.isArray() || rightType.isArray()) {
                 // Handle case where one of the operands is an array
-                addReport(newError(binaryExpr, "Cannot sum an array with a primitive type."));
+                addReport(newError(binaryExpr, "Cannot make this operations on an array."));
             } else {
                 // Both operands must be integers for arithmetic operations
                 if (!leftType.getName().equals("int") || !rightType.getName().equals("int")) {
@@ -48,12 +60,16 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
                 }
             }
 
-        } else if (op.matches("[<>=!]=?") || op.equals("&&") || op.equals("||")) {
+        } else if (op.matches("[=!]=?")) { // Left and right have to be the same type, but not one specific
 
             if (!leftType.getName().equals(rightType.getName())) {
                 addReport(newError(binaryExpr, "Operators require operands of the same type."));
             }
 
+        } else if (op.equals("&&") || op.equals("||")) { // Both left and right have to be boolean
+            if (!leftType.getName().equals("boolean") || !rightType.getName().equals("boolean")) {
+                addReport(newError(binaryExpr, "&& and || require boolean operands."));
+            }
         }
 
         return null;
@@ -237,8 +253,7 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
      * Validates the return type and expression type for method declarations.
      */
     private Void visitMethodDecl(JmmNode methodDecl, SymbolTable table) {
-
-        if (methodDecl.getNumChildren() == 0) {
+        if (methodDecl.getNumChildren() < 2) {
             return null;
         }
 
@@ -246,20 +261,50 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
         String methodName = methodDecl.get("name");
         Type returnType = table.getReturnType(methodName);
 
-        for (JmmNode child : methodDecl.getChildren()) {
-            if (child.getKind().equals(Kind.STMT.getNodeName()) && child.getNumChildren() > 0) {
-                JmmNode possibleReturnExpr = child.getChild(0);
+        if (methodName.equals("main")) {
+            return null;
+        }
 
-                if (Kind.check(possibleReturnExpr, Kind.EXPR)) {
-                    Type exprType = typeUtils.getExprType(possibleReturnExpr);
+        for (int i = 0; i < methodDecl.getNumChildren(); i++) {
+            JmmNode child = methodDecl.getChild(i);
 
-                    // Check if returnType or exprType is null and report the error
-                    if (returnType == null || exprType == null) {
-                        addReport(newError(possibleReturnExpr, "Void return type or expression."));
+            if (child.getKind().equals(Kind.TYPE.getNodeName())) {
+                continue;
+            }
+
+            if (child.getKind().equals(Kind.LITERAL.getNodeName()) ||
+                    child.getKind().equals(Kind.EXPR.getNodeName()) ||
+                    child.getKind().equals(Kind.BINARY_OP.getNodeName()) ||
+                    child.getKind().equals(Kind.IDENTIFIER.getNodeName()) ||
+                    child.getKind().equals(Kind.ARRAY_LITERAL.getNodeName())) {
+
+                Type exprType = typeUtils.getExprType(child);
+
+                if (returnType != null && exprType != null) {
+                    if (returnType.isArray() != exprType.isArray()) {
+                        if (returnType.isArray()) {
+                            addReport(newError(child, "Cannot return non-array type " + exprType.getName() +
+                                    " where array type " + returnType.getName() + "[] is expected."));
+                        } else {
+                            addReport(newError(child, "Cannot return array type " + exprType.getName() +
+                                    "[] where non-array type " + returnType.getName() + " is expected."));
+                        }
+                        return null;
                     }
-                    // Check if returnType does not match exprType
-                    else if (!returnType.equals(exprType)) {
-                        addReport(newError(possibleReturnExpr, "Type mismatch on return: expected " + returnType.getName() + " but found " + exprType.getName() + "."));
+
+                    if (!returnType.equals(exprType)) {
+                        boolean bothAreClasses = isNotPrimitive(returnType) && isNotPrimitive(exprType);
+                        if (bothAreClasses) {
+                            if (!isAssignableTo(returnType, exprType, table)) {
+                                addReport(newError(child, "Incompatible return type: expected "
+                                        + returnType.getName() + (returnType.isArray() ? "[]" : "")
+                                        + " but found " + exprType.getName() + (exprType.isArray() ? "[]" : "") + "."));
+                            }
+                        } else {
+                            addReport(newError(child, "Incompatible return type: expected "
+                                    + returnType.getName() + (returnType.isArray() ? "[]" : "")
+                                    + " but found " + exprType.getName() + (exprType.isArray() ? "[]" : "") + "."));
+                        }
                     }
                 }
             }

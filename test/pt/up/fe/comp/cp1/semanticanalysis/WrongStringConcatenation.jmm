@@ -1,0 +1,11 @@
+class StringConcatenation {
+    public static void main(String[] args) {}
+
+    public String foo() {
+        String a;
+        int b;
+        a = "aaa";
+        b = 2;
+        return a + b;
+    }
+}

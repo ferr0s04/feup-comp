@@ -1,0 +1,15 @@
+class AndWithBooleans {
+
+    public static void main(String[] args) {
+
+    }
+
+    public boolean foo() {
+        boolean a;
+        boolean b;
+        a = true;
+        b = false;
+
+        return a && b;
+    }
+}
