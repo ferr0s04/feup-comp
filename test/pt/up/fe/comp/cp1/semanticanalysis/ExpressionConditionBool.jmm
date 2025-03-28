@@ -1,0 +1,12 @@
+class ExpressionConditionBool {
+    public static void main(String[] args) {
+    }
+
+    public boolean test() {
+        if (2 + 3) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+}
