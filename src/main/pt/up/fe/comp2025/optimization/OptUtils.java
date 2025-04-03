@@ -42,10 +42,13 @@ public class OptUtils {
 
         TYPE.checkOrThrow(typeNode);
 
-        return toOllirType(types.convertType(typeNode));
+        return toOllirType(TypeUtils.convertType(typeNode));
     }
 
     public String toOllirType(Type type) {
+        if (type.isArray()) {return ".array" + toOllirType(type.getName());}
+        if(types.isImported(type)) {return "." + type.getName();}
+
         return toOllirType(type.getName());
     }
 
@@ -53,6 +56,9 @@ public class OptUtils {
 
         String type = "." + switch (typeName) {
             case "int" -> "i32";
+            case "boolean" -> "boolean";
+            case "String" -> "string";
+            case "void" -> "v";
             default -> throw new NotImplementedException(typeName);
         };
 

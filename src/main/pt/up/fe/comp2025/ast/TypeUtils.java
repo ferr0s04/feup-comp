@@ -52,6 +52,14 @@ public class TypeUtils {
         return type.getName().contains("Varargs");
     }
 
+
+    public boolean isImported(Type type) {
+        var imports = table.getImports();
+        return imports.contains(type.getName());
+    }
+
+
+
     /**
      * Converts a JmmNode representing a type into a {@link Type} object.
      * Ensures the node has a "name" attribute before converting.
