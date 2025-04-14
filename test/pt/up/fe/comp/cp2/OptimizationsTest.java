@@ -17,6 +17,7 @@ import org.junit.Test;
 import pt.up.fe.comp.CpUtils;
 import pt.up.fe.comp.jmm.ollir.OllirResult;
 import pt.up.fe.comp2025.CompilerConfig;
+import pt.up.fe.comp2025.ConfigOptions;
 import pt.up.fe.specs.util.SpecsIo;
 
 import java.util.Collections;
@@ -32,14 +33,14 @@ public class OptimizationsTest {
 
     static OllirResult getOllirResultOpt(String filename) {
         Map<String, String> config = new HashMap<>();
-        config.put(CompilerConfig.getOptimize(), "true");
+        config.put(ConfigOptions.getOptimize(), "true");
 
         return CpUtils.getOllirResult(SpecsIo.getResource(BASE_PATH + filename), config, true);
     }
 
     static OllirResult getOllirResultRegalloc(String filename, int maxRegs) {
         Map<String, String> config = new HashMap<>();
-        config.put(CompilerConfig.getRegister(), Integer.toString(maxRegs));
+        config.put(ConfigOptions.getRegister(), Integer.toString(maxRegs));
 
 
         return CpUtils.getOllirResult(SpecsIo.getResource(BASE_PATH + filename), config, true);
