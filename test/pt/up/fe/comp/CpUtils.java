@@ -20,6 +20,7 @@ import org.specs.comp.ollir.inst.*;
 import org.specs.comp.ollir.type.*;
 import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
 import pt.up.fe.comp.jmm.jasmin.JasminResult;
+import pt.up.fe.comp.jmm.ollir.JmmOptimization;
 import pt.up.fe.comp.jmm.ollir.OllirResult;
 import pt.up.fe.specs.util.SpecsCollections;
 import pt.up.fe.specs.util.SpecsIo;
@@ -28,10 +29,7 @@ import pt.up.fe.specs.util.exceptions.NotImplementedException;
 import pt.up.fe.specs.util.utilities.LineStream;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -40,6 +38,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.junit.Assert.fail;
+import static pt.up.fe.comp.TestUtils.*;
 
 /**
  * Utility methods used in checkpoint tests.
@@ -221,6 +220,10 @@ public class CpUtils {
     }
 
     public static void assertNotEquals(String message, Object expected, Object actual, JasminResult jasminResult) {
+        Assert.assertNotEquals(toMessage(message, jasminResult), expected, actual);
+    }
+
+    public static void assertNotEquals(String message, Object expected, Object actual, OllirResult jasminResult) {
         Assert.assertNotEquals(toMessage(message, jasminResult), expected, actual);
     }
 
@@ -456,7 +459,7 @@ public class CpUtils {
     }
 
     public static List<Element> getElements(Instruction inst) {
-        System.out.println("BEING CALLED FOR:");
+        System.out.println("BEING CALLED FOR: " + inst.getInstType());
         // inst.show();
         if (inst instanceof SingleOpInstruction) {
             return Arrays.asList(((SingleOpInstruction) inst).getSingleOperand());
@@ -479,6 +482,14 @@ public class CpUtils {
 
         if (inst instanceof ReturnInstruction) {
             return ((ReturnInstruction) inst).getOperand().map(Arrays::asList).orElse(Collections.emptyList());
+        }
+
+        if (inst instanceof CondBranchInstruction branchInst) {
+            return branchInst.getOperands();
+        }
+
+        if (inst instanceof GotoInstruction gotoInst) {
+            return Collections.emptyList();
         }
 
         System.out.println("CpUtils.getElements(Instruction): not yet implement for " + inst.getClass());
@@ -680,6 +691,58 @@ public class CpUtils {
         CpUtils.assertTrue(() -> "Expected to find literal " + literal, foundLiteral, result);
     }
 
+    public static void assertLiteralCount(String literal, Method method, OllirResult result, int expectedCount) {
+
+        var elements = getElements(method.getInstructions());
+
+        int literalCount = 0;
+        for (var element : elements) {
+
+            if (!(element instanceof LiteralElement literalElement)) {
+                continue;
+            }
+
+            if (!literalElement.getLiteral().equals(literal)) {
+                continue;
+            }
+
+            literalCount += 1;
+        }
+
+        var finalCount = literalCount;
+
+        CpUtils.assertTrue(() -> "Expected to find literal " + literal + " " + expectedCount + " times, found " + finalCount, finalCount == expectedCount, result);
+    }
+
+    public static void assertLiteralReturn(String literal, Method method, OllirResult result) {
+        var instructions = method.getInstructions();
+
+        boolean literalReturnFound = false;
+        for (var instruction : instructions) {
+
+            if (!(instruction instanceof ReturnInstruction returnInstruction)) {
+                continue;
+            }
+
+            if (returnInstruction.getOperand().isEmpty()) {
+                continue;
+            }
+
+            if (!(returnInstruction.getOperand().get() instanceof LiteralElement literalReturn)) {
+                continue;
+            }
+
+            if (!literalReturn.getLiteral().equals(literal)) {
+                continue;
+            }
+
+            literalReturnFound = true;
+            break;
+        }
+
+        CpUtils.assertTrue(() -> "Expected to find literal return " + literal, literalReturnFound, result);
+    }
+
     private static List<Element> getElements(List<Instruction> instructions) {
         return instructions.stream()
                 .flatMap(inst -> CpUtils.getElements(inst).stream())
@@ -720,4 +783,55 @@ public class CpUtils {
 
         CpUtils.assertTrue(() -> "Expected to find assignment to literal " + literal, foundLiteral, result);
     }
+
+    public static int countRegisters(ClassUnit ollirClass) {
+        ArrayList<Method> methodList = ollirClass.getMethods();
+        if (methodList == null)
+            return 0;
+
+        final Set<Integer> registers = new HashSet<>();
+
+        for (Method method : methodList) {
+            Map<String, Descriptor> varTable = method.getVarTable();
+            for (Descriptor descriptor : varTable.values()) {
+                registers.add(descriptor.getVirtualReg());
+            }
+        }
+
+        return registers.size();
+    }
+
+    public static int countRegisters(Method method) {
+
+        final Set<Integer> registers = new HashSet<>();
+
+        Map<String, Descriptor> varTable = method.getVarTable();
+        for (Descriptor descriptor : varTable.values()) {
+            registers.add(descriptor.getVirtualReg());
+        }
+
+        return registers.size();
+    }
+
+    public static OllirResult getOllirResult(String jmmCode, Map<String, String> config, boolean checkAnalysisReports) {
+        var semanticsResult = analyse(jmmCode, config);
+
+        // Check semantic analysis
+        if (checkAnalysisReports) {
+            noErrors(semanticsResult.getReports());
+        }
+
+        JmmOptimization optimization = getJmmOptimization();
+
+        // Always run all stages, each method has access to the config
+        // to decide if optimizations should be enabled or not
+        semanticsResult = optimization.optimize(semanticsResult);
+
+        var ollirResult = optimization.toOllir(semanticsResult);
+
+        ollirResult = optimization.optimize(ollirResult);
+
+        return ollirResult;
+    }
+
 }
