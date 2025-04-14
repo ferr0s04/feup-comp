@@ -1,0 +1,13 @@
+import io;
+
+class Folding {
+
+    public static void main(String[] args) {
+        int a;
+
+        a = 20 - 10 * 3 / 5;
+
+        io.print(a);
+    }
+
+}

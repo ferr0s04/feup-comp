@@ -1,0 +1,15 @@
+import io;
+
+class Folding {
+
+    public static void main(String[] args) {
+        int a;
+        boolean b;
+
+        a = 10 + 20;
+        b = 10 < 20;
+
+        io.print(a);
+    }
+
+}
