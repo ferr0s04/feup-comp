@@ -78,14 +78,14 @@ public class MethodCallVerificationVisitor extends AnalysisVisitor {
                 String arrayVarName = arrayExpr.get("name");
                 String arrayType = null;
 
-                for (Symbol localVar : table.getLocalVariables(methodCallExpr.getParent().get("name"))) {
+                for (Symbol localVar : table.getLocalVariables(currentMethod)) {
                     if (localVar.getName().equals(arrayVarName)) {
                         arrayType = String.valueOf(localVar.getType());
                         break;
                     }
                 }
 
-                if (arrayType == null) {
+                if (arrayType == null) { //HERE
                     addReport(newError(methodCallExpr, "Array variable '" + arrayVarName + "' is not declared."));
                     return null;
                 }

@@ -1,0 +1,11 @@
+class main {
+
+    public int foo() {
+        int[] x ;
+        int value;
+        x = new int[5];
+        value = x[2];
+        return 0;
+    }
+
+}

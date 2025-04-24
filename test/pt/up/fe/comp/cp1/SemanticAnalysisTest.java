@@ -537,4 +537,10 @@ public class SemanticAnalysisTest {
         TestUtils.noErrors(result);
     }
 
+    @Test
+    public void ArrayGood() {
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/ArrayGood.jmm"));
+        TestUtils.noErrors(result);
+    }
+
 }

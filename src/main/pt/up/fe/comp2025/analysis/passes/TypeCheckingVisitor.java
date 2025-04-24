@@ -148,8 +148,6 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
                     } else if (assignedType.getName().equals("length") && varType.getName().equals("int")) {
                         // Nada, está tudo fixolas
                     } else {
-                        System.out.println("varType" + varType);
-                        System.out.println("assignedType" + assignedType.getName());
                         addReport(newError(stmt, "Type mismatch: cannot assign "
                                 + assignedType.getName() + " to " + varType.getName() + "."));
                     }
@@ -437,11 +435,33 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
     }
 
     private Void visitLengthCall(JmmNode lengthExpr, SymbolTable table) {
-        System.out.println("Estou a entrar aqui: " + lengthExpr);
-        System.out.println("tableeee: " + table);
-        // ver se a variavel antes do .length é array ou String
-        // TODO NONO
+        // Get the target variable of the length operation (the variable before .length)
+        if (lengthExpr.getNumChildren() == 0) {
+            addReport(newError(lengthExpr, "Length operation missing target expression"));
+            return null;
+        }
 
+        JmmNode targetExpr = lengthExpr.getChild(0);
+        TypeUtils typeUtils = new TypeUtils(table);
+        Type targetType = typeUtils.getExprType(targetExpr);
+
+        if (targetType == null) {
+            addReport(newError(lengthExpr, "Cannot determine type of expression for length operation"));
+            return null;
+        }
+
+        // Check if the target type is array or String
+        if (targetType.isArray()) {
+            // This is valid - arrays have .length property
+            return null;
+        } else if (targetType.getName().equals("String")) {
+            // This is valid - String has .length() method
+            return null;
+        } else {
+            // Invalid type for length operation
+            addReport(newError(lengthExpr, "Length operation is only valid for arrays and Strings, but got " +
+                    targetType.getName()));
+        }
 
         return null;
     }
