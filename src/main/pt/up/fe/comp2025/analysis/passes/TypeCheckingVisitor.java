@@ -136,8 +136,23 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
                 if (!varType.equals(assignedType)) {
                     boolean bothAreClasses = isNotPrimitive(varType) && isNotPrimitive(assignedType);
                     if (bothAreClasses) {
+                        // ---- IMPORTED‐CLASS BYPASS ----
+                        boolean lhsImported = table.getImports().stream()
+                                .anyMatch(imp -> imp.equals(varType.getName())
+                                        || imp.endsWith("." + varType.getName()));
+                        Type finalAssignedType = assignedType;
+                        boolean rhsImported = table.getImports().stream()
+                                .anyMatch(imp -> imp.equals(finalAssignedType.getName())
+                                        || imp.endsWith("." + finalAssignedType.getName()));
+                        if (lhsImported && rhsImported) {
+                            // both sides are imported classes -> accept unconditionally
+                            return null;
+                        }
+                        // otherwise fall back to your normal inheritance check
                         if (!isAssignableTo(varType, assignedType, table)) {
-                            addReport(newError(stmt, "Error: type " + assignedType.getName() + " cannot be assigned to " + varType.getName() + "."));
+                            addReport(newError(stmt,
+                                    "Error: type " + assignedType.getName() +
+                                            " cannot be assigned to " + varType.getName() + "."));
                         }
                         return null;
                     }

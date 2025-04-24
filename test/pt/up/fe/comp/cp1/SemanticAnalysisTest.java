@@ -533,7 +533,7 @@ public class SemanticAnalysisTest {
     @Test
     public void newImportTest() {
         var result = TestUtils
-                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/newimporttest.jmm"));
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/newImportTest.jmm"));
         TestUtils.noErrors(result);
     }
 

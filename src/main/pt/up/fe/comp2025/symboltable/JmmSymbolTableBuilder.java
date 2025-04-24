@@ -162,8 +162,6 @@ public class JmmSymbolTableBuilder {
     private String extractImport(JmmNode importNode) {
         String raw = importNode.get("name"); // "[a,b,c]"
         String cleaned = raw.replaceAll("[\\[\\]\\s]", ""); // Remove brackets and spaces
-        System.out.println("Mexilhao");
-        System.out.println(String.join(".", cleaned.split(",")));
         return String.join(".", cleaned.split(",")); // Join by "."
     }
 

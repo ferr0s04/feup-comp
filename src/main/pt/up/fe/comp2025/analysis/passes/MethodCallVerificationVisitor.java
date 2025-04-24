@@ -47,6 +47,24 @@ public class MethodCallVerificationVisitor extends AnalysisVisitor {
      * Handles method call expressions by verifying different types of method calls: simple method call, array access, and more complex scenarios.
      */
     private Void visitMethodCallExpr(JmmNode methodCallExpr, SymbolTable table) {
+
+        if (methodCallExpr.getNumChildren() > 0) {
+            JmmNode receiver = methodCallExpr.getChild(0);
+            if (Kind.check(receiver, Kind.IDENTIFIER)) {
+                String classOrVar = receiver.get("name");
+                boolean imported = table.getImports().stream()
+                        .anyMatch(imp ->
+                                // full import
+                                imp.equals(classOrVar) ||
+                                        // import with package qualifier
+                                        imp.endsWith("." + classOrVar)
+                        );
+                if (imported) {
+                    return null;
+                }
+            }
+        }
+
         // One child
         if (methodCallExpr.getChildren().size() == 1) {
             JmmNode identifierNode = methodCallExpr.getChildren().getFirst();
