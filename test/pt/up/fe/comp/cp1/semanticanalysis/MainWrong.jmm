@@ -1,0 +1,13 @@
+class main {
+
+    public static void main(Int[] args) {
+
+    }
+
+    public int main() {
+        int main;
+        main = 0;
+        return main;
+    }
+
+}

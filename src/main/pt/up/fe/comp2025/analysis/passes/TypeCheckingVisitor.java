@@ -8,6 +8,8 @@ import pt.up.fe.comp2025.ast.Kind;
 import pt.up.fe.comp2025.ast.TypeUtils;
 import pt.up.fe.comp.jmm.analysis.table.Type;
 
+import java.util.Arrays;
+
 public class TypeCheckingVisitor extends AnalysisVisitor {
 
     @Override
@@ -18,6 +20,7 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
         addVisit(Kind.PRIMARY, this::visitPrimaryExpr);
         addVisit(Kind.ARRAY_LITERAL, this::visitArrayLiteral);
         addVisit(Kind.INCREMENT, this::visitUnaryExpr);
+        addVisit(Kind.LENGTH_STMT, this::visitLengthCall);
     }
 
     /**
@@ -142,7 +145,11 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
                     // Handle primitive type mismatch
                     if (varType.getName().equals("boolean") && assignedType.getName().equals("int")) {
                         addReport(newError(stmt, "Error: Cannot assign an integer to a boolean."));
+                    } else if (assignedType.getName().equals("length") && varType.getName().equals("int")) {
+                        // Nada, está tudo fixolas
                     } else {
+                        System.out.println("varType" + varType);
+                        System.out.println("assignedType" + assignedType.getName());
                         addReport(newError(stmt, "Type mismatch: cannot assign "
                                 + assignedType.getName() + " to " + varType.getName() + "."));
                     }
@@ -217,52 +224,112 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
      * Handles primary expressions and validates their type and existence in the symbol table.
      */
     private Void visitPrimaryExpr(JmmNode primaryExpr, SymbolTable table) {
-        TypeUtils typeUtils = new TypeUtils(table);
-        Type type = typeUtils.getExprType(primaryExpr);
-
-        // Handle case where the type cannot be determined
-        if (type == null) {
-            addReport(newError(primaryExpr, "Unknown type for primary expression."));
+        // If it's not an identifier, we don't do the variable‐lookup logic here
+        if (!Kind.check(primaryExpr, Kind.IDENTIFIER)) {
+            return null;
         }
 
-        // If it's a variable, check if it exists in the symbol table
-        if (Kind.check(primaryExpr, Kind.IDENTIFIER)) {
-            String varName = primaryExpr.get("name");
-            JmmNode methodNode = primaryExpr.getAncestor(Kind.METHOD_DECL).orElse(null);
-            String methodName = (methodNode != null) ? methodNode.get("name") : null;
+        String id = primaryExpr.get("name");
+        String className = table.getClassName();
+        String superName = table.getSuper();
 
-            // Check if the variable exists in the local variables symbol table
-            Type varType = null;
-            if (methodName != null) {
-                varType = table.getLocalVariables(methodName).stream()
-                        .filter(var -> var.getName().equals(varName))
-                        .map(Symbol::getType)
-                        .findFirst()
-                        .orElse(null);
-            }
+        // 1) If it's the current class or its superclass, skip variable check
+        if (id.equals(className) || (superName != null && id.equals(superName))) {
+            return null;
+        }
 
-            if (varType == null) {
-                addReport(newError(primaryExpr, "Variable " + varName + " not in scope."));
-            }
+        // 2) If it's an imported type (either full or simple name), skip
+        boolean imported = table.getImports().stream().anyMatch(imp -> {
+            // imp might be "java.util.List" or just "List"
+            String simple = imp.contains(".")
+                    ? imp.substring(imp.lastIndexOf('.') + 1)
+                    : imp;
+            return imp.equals(id) || simple.equals(id);
+        });
+        if (imported) {
+            return null;
+        }
+
+        // 3) Otherwise it really is a variable—look in locals, then params, then fields
+        JmmNode methodNode = primaryExpr.getAncestor(Kind.METHOD_DECL).orElse(null);
+        String methodName = methodNode != null ? methodNode.get("name") : null;
+
+        Type varType = table.getLocalVariables(methodName).stream()
+                .filter(v -> v.getName().equals(id))
+                .map(Symbol::getType)
+                .findFirst().orElse(null);
+
+        if (varType == null) {
+            varType = table.getParameters(methodName).stream()
+                    .filter(p -> p.getName().equals(id))
+                    .map(Symbol::getType)
+                    .findFirst().orElse(null);
+        }
+
+        if (varType == null) {
+            varType = table.getFields().stream()
+                    .filter(f -> f.getName().equals(id))
+                    .map(Symbol::getType)
+                    .findFirst().orElse(null);
+        }
+
+        if (varType == null) {
+            addReport(newError(primaryExpr, "Variable '" + id + "' is not declared."));
         }
 
         return null;
     }
 
+
     /**
      * Validates the return type and expression type for method declarations.
      */
     private Void visitMethodDecl(JmmNode methodDecl, SymbolTable table) {
-        if (methodDecl.getNumChildren() < 2) {
-            return null;
-        }
 
         TypeUtils typeUtils = new TypeUtils(table);
         String methodName = methodDecl.get("name");
         Type returnType = table.getReturnType(methodName);
 
-        if (methodName.equals("main")) {
-            return null;
+        boolean isMain = methodDecl.getBoolean("isMain", false);
+
+
+        if (isMain) {
+            if(!methodName.equals("main")){ // Verificar que se chama Main
+                addReport(newError(methodDecl, "Static void needs to be named main."));
+            }
+            // Verificar que String[] args
+            if ((!methodDecl.get("string").equals("String")) || (!methodDecl.get("args").equals("args"))) {
+                addReport(newError(methodDecl, "Static void needs to have String[] args."));
+            }
+
+            // Verificar que não existe nenhum return startement
+            for (JmmNode child : methodDecl.getChildren()) {
+                if (child.getKind().equals(Kind.RETURN_STMT.getNodeName())) {
+                    addReport(newError(child, "Static void main cannot have a return statement."));
+                }
+            }
+
+
+        }
+
+        // 1. Collect all PARAM children
+        var params = methodDecl.getChildren().stream()
+                .filter(Kind.PARAM::check)
+                .toList();
+
+        // 2. Check each for varargs (isArray) and ensure it's the last
+        for (int i = 0; i < params.size(); i++) {
+            JmmNode paramNode = params.get(i);
+            // the type node is the first child of the PARAM
+            JmmNode typeNode  = paramNode.getChild(0);
+            boolean isArray   = typeNode.hasAttribute("isArray")
+                    && Boolean.parseBoolean(typeNode.get("isArray"));
+
+            if (isArray && i != params.size() - 1) {
+                // report on the PARAM node (you could also get line/col from typeNode)
+                addReport(newError(paramNode,
+                        "Varargs parameter must be the last parameter in the list."));
+            }
         }
 
         for (int i = 0; i < methodDecl.getNumChildren(); i++) {
@@ -368,4 +435,15 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
 
         return null;
     }
+
+    private Void visitLengthCall(JmmNode lengthExpr, SymbolTable table) {
+        System.out.println("Estou a entrar aqui: " + lengthExpr);
+        System.out.println("tableeee: " + table);
+        // ver se a variavel antes do .length é array ou String
+        // TODO NONO
+
+
+        return null;
+    }
+
 }

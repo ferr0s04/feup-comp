@@ -1,0 +1,15 @@
+class length {
+
+    public static void main(String[] args) {
+
+    }
+
+    public int length() {
+        int length;
+        int[] a;
+        a = [1,2,3,4];
+        length = a,length;
+        return length;
+    }
+
+}

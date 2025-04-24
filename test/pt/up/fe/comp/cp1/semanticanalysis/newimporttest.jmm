@@ -1,0 +1,11 @@
+import io;
+import ola.dfghghg;
+
+class ImportUsage {
+    public static void main(String[] args) { }
+
+    public boolean foo() {
+        io.print();
+        return true;
+    }
+}

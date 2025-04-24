@@ -1,0 +1,12 @@
+class UnaryOp {
+    public static void main(String[] args) {
+    }
+
+    public boolean foo() {
+        boolean a;
+        boolean b;
+        a = true;
+        b = !a;
+        return b;
+    }
+}

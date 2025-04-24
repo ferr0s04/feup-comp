@@ -13,7 +13,6 @@ TRUE : 'true';
 FALSE : 'false';
 STATIC : 'static';
 VOID : 'void';
-MAIN : 'main';
 IF : 'if';
 ELSE : 'else';
 WHILE : 'while';
@@ -21,7 +20,6 @@ FOR : 'for';
 ELSEIF : 'else if';
 NEW : 'new';
 THIS : 'this';
-LENGTH : 'length';
 
 INTEGER : [0] | [1-9][0-9]* ;
 ID : [a-zA-Z$_][a-zA-Z0-9$_]* ;
@@ -34,8 +32,7 @@ BLOCK_COMMENT : '/*' .*? '*/' -> skip ;
 STRING : '"' (~["\r\n])* '"' ;
 
 program
-    : stmt + EOF
-    | (importDecl)* classDecl EOF
+    : (importDecl)* classDecl EOF
     ;
 
 importDecl
@@ -63,14 +60,14 @@ type locals[boolean isArray=false]
     | name=ID
     ;
 
-methodDecl locals[boolean isPublic=false]
+methodDecl locals[boolean isPublic=false, boolean isMain=false]
     : (PUBLIC {$isPublic=true;})?
       type name=ID
       '(' (param (',' param)*)? ')'
-      '{' (varDecl)* (stmt)* 'return' expr ';' '}'
-    | (PUBLIC {$isPublic=true;})?
-      STATIC VOID name=MAIN
-      '(' ID '[' ']' ID ')'
+      '{' (varDecl)* (stmt)* 'return' expr? ';' '}'
+    | (PUBLIC {$isPublic=true; $isMain=true;})?
+      STATIC VOID name=ID
+      '(' string=ID '[' ']' args=ID ')'
       '{' (varDecl)* (stmt)* '}'
     ;
 
@@ -97,7 +94,7 @@ expr
     | '!' expr                                      # UnaryOp
     | NEW 'int' '[' expr ']'                        # NewArray
     | NEW name=ID '(' ')'                           # NewObject
-    | expr '.' LENGTH                               # Primary
+    | expr '.' length=ID                            # LengthStmt
     | expr '.' name=ID '(' (expr (',' expr)*)? ')'  # AccessOrCall
     | expr '[' expr ']'                             # AccessOrCall
     | expr op=('*' | '/') expr                      # BinaryOp

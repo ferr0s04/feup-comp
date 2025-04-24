@@ -160,12 +160,11 @@ public class JmmSymbolTableBuilder {
     }
 
     private String extractImport(JmmNode importNode) {
-        StringBuilder importPath = new StringBuilder(importNode.get("name"));
-
-        for (var part : importNode.getChildren()) {
-            importPath.append(".").append(part.get("name"));
-        }
-
-        return importPath.toString();
+        String raw = importNode.get("name"); // "[a,b,c]"
+        String cleaned = raw.replaceAll("[\\[\\]\\s]", ""); // Remove brackets and spaces
+        System.out.println("Mexilhao");
+        System.out.println(String.join(".", cleaned.split(",")));
+        return String.join(".", cleaned.split(",")); // Join by "."
     }
+
 }

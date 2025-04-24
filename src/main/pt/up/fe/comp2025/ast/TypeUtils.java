@@ -87,7 +87,7 @@ public class TypeUtils {
             case IDENTIFIER -> lookupVariableType(expr);
             case ACCESS_OR_CALL -> inferArrayAccessType(expr);
             case METHOD_DECL -> lookupMethodReturnType(expr);
-            case PRIMARY -> inferPrimaryType(expr);
+            case PRIMARY, LENGTH_STMT -> inferPrimaryType(expr);
             case ASSIGN_STMT -> {
                 lookupAssignStmt(expr);
                 yield newVoidType();
@@ -116,6 +116,7 @@ public class TypeUtils {
                 }
                 yield idType;
             }
+            case UNARY_OP -> inferUnaryOpType(expr);
             default -> throw new IllegalArgumentException("Unsupported expression type: " + kind);
         };
     }
@@ -151,6 +152,11 @@ public class TypeUtils {
         if (primaryNode.getKind().equals("NewArray")) {
             String elementType = primaryNode.get("type");
             return new Type(elementType, true);
+        }
+
+        // Length
+        if (primaryNode.getKind().equals("LengthStmt")) {
+            return new Type(primaryNode.get("length"), false);
         }
 
         // If no case matches, throw an error
@@ -202,6 +208,20 @@ public class TypeUtils {
         throw new IllegalArgumentException("Unknown binary operator: " + op);
     }
 
+    /**
+     * Infers the type of a unary operation based on the operator.
+     */
+    private Type inferUnaryOpType(JmmNode expr) {
+        Type childType = getExprType(expr.getChild(0));
+
+        // Checks if the unary operator is '!' and if the child type is boolean
+        if (!childType.getName().equals("boolean")) {
+            throw new IllegalArgumentException(
+                    "Unary '!' operator requires boolean type, but found: " + childType.getName()
+            );
+        }
+        return newBooleanType();
+    }
 
     /**
      * Retrieves the type of a variable by looking it up in the symbol table.
@@ -306,6 +326,8 @@ public class TypeUtils {
 
         // Type check: Ensure the assigned expression type matches the variable type
         if (!varType.equals(exprType)) {
+            System.out.println("varType" + varType);
+            System.out.println("exprType" + exprType);
             throw new IllegalArgumentException(
                     "Type mismatch: Cannot assign " + exprType.getName() + " to " + varType.getName()
             );

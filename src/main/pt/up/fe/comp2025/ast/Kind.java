@@ -38,7 +38,8 @@ public enum Kind {
     RETURN_STMT,
     ASSIGN_STMT,
     INCREMENT,
-    STRING;
+    STRING,
+    LENGTH_STMT;
 
     private final String name;
 

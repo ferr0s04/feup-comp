@@ -1,0 +1,13 @@
+class length {
+
+    public static void main(Int[] args) {
+        return 0;
+    }
+
+    public int length() {
+        int length;
+        length = 0;
+        return length;
+    }
+
+}

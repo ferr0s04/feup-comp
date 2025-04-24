@@ -61,7 +61,9 @@ public class IdentifierAndDeclarationVerification extends AnalysisVisitor {
     private boolean isDeclared(String varName, SymbolTable table) {
         return table.getParameters(currentMethod).stream().anyMatch(param -> param.getName().equals(varName)) ||
                 table.getLocalVariables(currentMethod).stream().anyMatch(var -> var.getName().equals(varName)) ||
-                table.getFields().stream().anyMatch(field -> field.getName().equals(varName));
+                table.getFields().stream().anyMatch(field -> field.getName().equals(varName)) ||
+                table.getImports().stream().anyMatch(name -> name.equals(varName) || name.endsWith("." + varName));
+
     }
 
 }
