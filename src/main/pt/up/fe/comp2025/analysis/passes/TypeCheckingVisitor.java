@@ -368,52 +368,226 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
             }
         }
 
-        for (int i = 0; i < methodDecl.getNumChildren(); i++) {
-            JmmNode child = methodDecl.getChild(i);
+        // Count return statements
+        int returnCount = 0;
 
-            if (child.getKind().equals(Kind.TYPE.getNodeName())) {
-                continue;
-            }
+        // Look for return statements
+        for (JmmNode child : methodDecl.getChildren()) {
+            if (child.getKind().equals(Kind.RETURN_STMT.getNodeName())) {
+                returnCount++;
 
-            if (child.getKind().equals(Kind.LITERAL.getNodeName()) ||
-                    child.getKind().equals(Kind.EXPR.getNodeName()) ||
-                    child.getKind().equals(Kind.BINARY_OP.getNodeName()) ||
-                    child.getKind().equals(Kind.IDENTIFIER.getNodeName()) ||
-                    child.getKind().equals(Kind.ARRAY_LITERAL.getNodeName())) {
+                // Check if there's a return expression
+                if (child.getNumChildren() > 0) {
+                    JmmNode returnExpr = child.getChild(0);
 
-                Type exprType = typeUtils.getExprType(child);
+                    // Special handling for method calls
+                    if (returnExpr.getKind().equals(Kind.METHOD_CALL.getNodeName())) {
+                        JmmNode targetExpr = returnExpr.getChild(0);
 
-                if (returnType != null && exprType != null) {
-                    if (returnType.isArray() != exprType.isArray()) {
-                        if (returnType.isArray()) {
-                            addReport(newError(child, "Cannot return non-array type " + exprType.getName() +
-                                    " where array type " + returnType.getName() + "[] is expected."));
-                        } else {
-                            addReport(newError(child, "Cannot return array type " + exprType.getName() +
-                                    "[] where non-array type " + returnType.getName() + " is expected."));
+                        // Check if the target is an identifier
+                        if (targetExpr.getKind().equals(Kind.IDENTIFIER.getNodeName())) {
+                            String targetName = targetExpr.get("name");
+
+                            // Check if the target is from an imported class
+                            boolean isImportedClass = false;
+                            for (String imp : table.getImports()) {
+                                String simpleName = imp;
+                                if (imp.contains(".")) {
+                                    simpleName = imp.substring(imp.lastIndexOf('.') + 1);
+                                }
+
+                                // Check if the target is an instance of an imported class
+                                for (Symbol local : table.getLocalVariables(methodName)) {
+                                    if (local.getName().equals(targetName) &&
+                                            (local.getType().getName().equals(imp) ||
+                                                    local.getType().getName().equals(simpleName))) {
+                                        isImportedClass = true;
+                                        break;
+                                    }
+                                }
+
+                                // Also check parameters
+                                for (Symbol param : table.getParameters(methodName)) {
+                                    if (param.getName().equals(targetName) &&
+                                            (param.getType().getName().equals(imp) ||
+                                                    param.getType().getName().equals(simpleName))) {
+                                        isImportedClass = true;
+                                        break;
+                                    }
+                                }
+
+                                if (isImportedClass) break;
+                            }
+
+                            if (isImportedClass) {
+                                // If it's a method call on an imported class, assume it matches the required return type
+                                continue;
+                            }
                         }
-                        return null;
                     }
 
-                    if (!returnType.equals(exprType)) {
-                        boolean bothAreClasses = isNotPrimitive(returnType) && isNotPrimitive(exprType);
-                        if (bothAreClasses) {
-                            if (!isAssignableTo(returnType, exprType, table)) {
-                                addReport(newError(child, "Incompatible return type: expected "
-                                        + returnType.getName() + (returnType.isArray() ? "[]" : "")
-                                        + " but found " + exprType.getName() + (exprType.isArray() ? "[]" : "") + "."));
+                    // For other expressions, proceed with normal type checking
+                    Type exprType;
+                    try {
+                        exprType = typeUtils.getExprType(returnExpr);
+
+                        // Check if exprType is null and the expression might involve an imported class
+                        if (exprType == null && involvesImportedClass(returnExpr, table, methodName)) {
+                            // Assume return type is compatible
+                            continue;
+                        }
+
+                        // Only check compatibility if we could determine the type
+                        if (returnType != null && exprType != null) {
+                            if (returnType.isArray() != exprType.isArray()) {
+                                if (returnType.isArray()) {
+                                    addReport(newError(returnExpr, "Cannot return non-array type " + exprType.getName() +
+                                            " where array type " + returnType.getName() + "[] is expected."));
+                                } else {
+                                    addReport(newError(returnExpr, "Cannot return array type " + exprType.getName() +
+                                            "[] where non-array type " + returnType.getName() + " is expected."));
+                                }
+                            } else if (!returnType.equals(exprType)) {
+                                boolean bothAreClasses = isNotPrimitive(returnType) && isNotPrimitive(exprType);
+                                if (bothAreClasses) {
+                                    if (!isAssignableTo(returnType, exprType, table)) {
+                                        addReport(newError(returnExpr, "Incompatible return type: expected "
+                                                + returnType.getName() + (returnType.isArray() ? "[]" : "")
+                                                + " but found " + exprType.getName() + (exprType.isArray() ? "[]" : "") + "."));
+                                    }
+                                } else {
+                                    addReport(newError(returnExpr, "Incompatible return type: expected "
+                                            + returnType.getName() + (returnType.isArray() ? "[]" : "")
+                                            + " but found " + exprType.getName() + (exprType.isArray() ? "[]" : "") + "."));
+                                }
                             }
-                        } else {
-                            addReport(newError(child, "Incompatible return type: expected "
-                                    + returnType.getName() + (returnType.isArray() ? "[]" : "")
-                                    + " but found " + exprType.getName() + (exprType.isArray() ? "[]" : "") + "."));
+                        }
+                    } catch (Exception e) {
+                        // If expression involves an imported class, assume it's correct
+                        if (involvesImportedClass(returnExpr, table, methodName)) {
+                            continue;
+                        }
+                        // Otherwise report an error
+                        addReport(newError(returnExpr, "Cannot determine type of expression"));
+                    }
+                } else if (!returnType.getName().equals("void")) {
+                    // Return statement with no expression, but method requires a return value
+                    addReport(newError(child, "Missing return value: method " + methodName +
+                            " must return a value of type " + returnType.getName() +
+                            (returnType.isArray() ? "[]" : "")));
+                }
+            }
+        }
+
+        if (returnCount > 1) {
+            addReport(newError(methodDecl, "Cannot have more than one return statement."));
+        }
+
+        // Check if a non-void method is missing a return statement
+        if (returnCount == 0 && !returnType.getName().equals("void") && !isMain) {
+            addReport(newError(methodDecl, "Missing return statement: method " + methodName +
+                    " must return a value of type " + returnType.getName() +
+                    (returnType.isArray() ? "[]" : "")));
+        }
+
+        return null;
+    }
+
+
+    /**
+     * Helper method to check if an expression involves an imported class
+     */
+    private boolean involvesImportedClass(JmmNode expr, SymbolTable table, String methodName) {
+        // For method calls, check the target
+        if (expr.getKind().equals(Kind.METHOD_CALL.getNodeName()) && expr.getNumChildren() > 0) {
+            JmmNode target = expr.getChild(0);
+            if (target.getKind().equals(Kind.IDENTIFIER.getNodeName())) {
+                String varName = target.get("name");
+
+                // Check all local variables and parameters
+                for (Symbol local : table.getLocalVariables(methodName)) {
+                    if (local.getName().equals(varName)) {
+                        String typeName = local.getType().getName();
+                        // Check if type name matches any import
+                        for (String imp : table.getImports()) {
+                            String simpleName = imp.contains(".") ? imp.substring(imp.lastIndexOf('.') + 1) : imp;
+                            if (typeName.equals(imp) || typeName.equals(simpleName)) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+
+                for (Symbol param : table.getParameters(methodName)) {
+                    if (param.getName().equals(varName)) {
+                        String typeName = param.getType().getName();
+                        // Check if type name matches any import
+                        for (String imp : table.getImports()) {
+                            String simpleName = imp.contains(".") ? imp.substring(imp.lastIndexOf('.') + 1) : imp;
+                            if (typeName.equals(imp) || typeName.equals(simpleName)) {
+                                return true;
+                            }
                         }
                     }
                 }
             }
         }
 
-        return null;
+        // For "new object" expressions, check if creating an instance of an imported class
+        if (expr.getKind().equals(Kind.NEW_OBJECT.getNodeName()) && expr.getNumChildren() > 0) {
+            JmmNode typeNode = expr.getChild(0);
+            if (typeNode.getKind().equals(Kind.TYPE.getNodeName())) {
+                String typeName = typeNode.get("name");
+                // Check if type name matches any import
+                for (String imp : table.getImports()) {
+                    String simpleName = imp.contains(".") ? imp.substring(imp.lastIndexOf('.') + 1) : imp;
+                    if (typeName.equals(imp) || typeName.equals(simpleName)) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        // For regular identifiers
+        if (expr.getKind().equals(Kind.IDENTIFIER.getNodeName())) {
+            String varName = expr.get("name");
+
+            // Check all local variables and parameters
+            for (Symbol local : table.getLocalVariables(methodName)) {
+                if (local.getName().equals(varName)) {
+                    String typeName = local.getType().getName();
+                    // Check if type name matches any import
+                    for (String imp : table.getImports()) {
+                        String simpleName = imp.contains(".") ? imp.substring(imp.lastIndexOf('.') + 1) : imp;
+                        if (typeName.equals(imp) || typeName.equals(simpleName)) {
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            for (Symbol param : table.getParameters(methodName)) {
+                if (param.getName().equals(varName)) {
+                    String typeName = param.getType().getName();
+                    // Check if type name matches any import
+                    for (String imp : table.getImports()) {
+                        String simpleName = imp.contains(".") ? imp.substring(imp.lastIndexOf('.') + 1) : imp;
+                        if (typeName.equals(imp) || typeName.equals(simpleName)) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Recursively check all children
+        for (int i = 0; i < expr.getNumChildren(); i++) {
+            if (involvesImportedClass(expr.getChild(i), table, methodName)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

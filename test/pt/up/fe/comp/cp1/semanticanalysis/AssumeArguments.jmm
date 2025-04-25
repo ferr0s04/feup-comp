@@ -6,7 +6,7 @@ class AssumeArguments {
 
     }
 
-    public int bar() {
+    public int bar() { // assume everything that is from the imported class to be correct
         A a;
         boolean b;
 

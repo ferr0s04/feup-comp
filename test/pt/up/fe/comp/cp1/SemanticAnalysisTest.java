@@ -479,6 +479,13 @@ public class SemanticAnalysisTest {
     }
 
     @Test
+    public void ReturnWrong7() {
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/ReturnWrong7.jmm"));
+        TestUtils.mustFail(result);
+        System.out.println(result.getReports());
+    }
+
+    @Test
     public void returnArrayUnDirectly() {
         var result = TestUtils
                 .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/ReturnArrayUnDirectly.jmm"));
@@ -551,13 +558,13 @@ public class SemanticAnalysisTest {
         System.out.println(result.getReports());
     }
 
-    /*@Test
+    @Test
     public void TwoReturns() {
         var result = TestUtils
                 .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/TwoReturns.jmm"));
         TestUtils.mustFail(result);
         System.out.println(result.getReports());
-    }*/
+    }
 
     @Test
     public void ThisReference() {

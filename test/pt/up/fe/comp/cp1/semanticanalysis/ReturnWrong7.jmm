@@ -1,0 +1,11 @@
+class ReturnWrong7 {
+    public static void main(String[] args) {
+        return 0;
+    }
+
+    public int foo() {
+        int a;
+        a = 0;
+    }
+
+}

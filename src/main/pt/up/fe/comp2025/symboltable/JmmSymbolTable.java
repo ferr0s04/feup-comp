@@ -56,6 +56,9 @@ public class JmmSymbolTable extends AJmmSymbolTable {
 
     @Override
     public Type getReturnType(String methodSignature) {
+        if (!methods.contains(methodSignature)) {
+            throw new IllegalArgumentException("Unknown method: " + methodSignature);
+        }
         return returnTypes.getOrDefault(methodSignature, TypeUtils.newVoidType());
     }
 
