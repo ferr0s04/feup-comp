@@ -9,6 +9,8 @@ import pt.up.fe.comp2025.ast.TypeUtils;
 import pt.up.fe.comp.jmm.analysis.table.Type;
 
 import java.util.Arrays;
+import java.util.Set;
+import java.util.HashSet;
 
 public class TypeCheckingVisitor extends AnalysisVisitor {
 
@@ -20,7 +22,7 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
         addVisit(Kind.PRIMARY, this::visitPrimaryExpr);
         addVisit(Kind.ARRAY_LITERAL, this::visitArrayLiteral);
         addVisit(Kind.INCREMENT, this::visitUnaryExpr);
-        addVisit(Kind.LENGTH_STMT, this::visitLengthCall);
+        addVisit(Kind.LENGTH_ACCESS, this::visitLengthCall);
     }
 
     /**
@@ -302,6 +304,27 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
         TypeUtils typeUtils = new TypeUtils(table);
         String methodName = methodDecl.get("name");
         Type returnType = table.getReturnType(methodName);
+
+        Set<String> methodNames = new HashSet<>();
+        for (String name : table.getMethods()) {
+            if (!methodNames.add(name)) {
+                addReport(newError(methodDecl, "Duplicate method name: " + name));
+            }
+        }
+
+        Set<String> paramNames = new HashSet<>();
+        for (Symbol param : table.getParameters(methodName)) {
+            if (!paramNames.add(param.getName())) {
+                addReport(newError(methodDecl, "Duplicate parameter name: " + param.getName()));
+            }
+        }
+
+        Set<String> localVarNames = new HashSet<>();
+        for (Symbol local : table.getLocalVariables(methodName)) {
+            if (!localVarNames.add(local.getName())) {
+                addReport(newError(methodDecl, "Duplicate local variable name: " + local.getName()));
+            }
+        }
 
         boolean isMain = methodDecl.getBoolean("isMain", false);
 

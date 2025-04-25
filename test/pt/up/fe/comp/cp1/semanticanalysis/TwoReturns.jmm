@@ -1,0 +1,7 @@
+class TwoReturns {
+
+    public int foo() {
+        return 1;
+        return 2;
+    }
+}

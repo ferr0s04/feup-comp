@@ -1,0 +1,14 @@
+class ArrayAccessNotMethodCall {
+
+    public static void main(String[] args) {
+    }
+
+    public int getElement() {
+        int[] arr;
+        int value;
+        arr = [10, 20, 30];
+        value = arr[1];
+        return value;
+    }
+}
+

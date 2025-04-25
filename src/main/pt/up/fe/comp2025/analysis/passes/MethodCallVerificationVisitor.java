@@ -17,7 +17,8 @@ public class MethodCallVerificationVisitor extends AnalysisVisitor {
     public void buildVisitor() {
         addVisit(Kind.METHOD_DECL, this::visitMethodDecl);
         addVisit(Kind.IDENTIFIER, this::visitVarRefExpr);
-        addVisit(Kind.ACCESS_OR_CALL, this::visitMethodCallExpr);  // Fixed method call kind
+        addVisit(Kind.METHOD_CALL, this::visitMethodCallExpr);
+        addVisit(Kind.ARRAY_ACCESS, this::visitArrayAccessExpr);
     }
 
     /**
@@ -47,7 +48,7 @@ public class MethodCallVerificationVisitor extends AnalysisVisitor {
      * Handles method call expressions by verifying different types of method calls: simple method call, array access, and more complex scenarios.
      */
     private Void visitMethodCallExpr(JmmNode methodCallExpr, SymbolTable table) {
-
+        // Check for imported class methods
         if (methodCallExpr.getNumChildren() > 0) {
             JmmNode receiver = methodCallExpr.getChild(0);
             if (Kind.check(receiver, Kind.IDENTIFIER)) {
@@ -69,85 +70,25 @@ public class MethodCallVerificationVisitor extends AnalysisVisitor {
         if (methodCallExpr.getChildren().size() == 1) {
             JmmNode identifierNode = methodCallExpr.getChildren().getFirst();
 
-            String methodName = identifierNode.get("name");
+            String methodName;
 
-            // Verify if the method is declared
+            if (identifierNode.getKind().equals(Kind.THIS_REFERENCE.getNodeName())) {
+                methodName = methodCallExpr.get("name");
+            } else if (identifierNode.hasAttribute("name")) {
+                methodName = identifierNode.get("name");
+            } else {
+                addReport(newError(methodCallExpr, "Invalid method call: missing method name."));
+                return null;
+            }
+
             if (isNotDeclaredMethod(methodName, table)) {
                 addReport(newError(methodCallExpr, "Method '" + methodName + "' is not declared or accessible."));
             }
-        }
-        // Two children
-        else if (methodCallExpr.getChildren().size() == 2) {
-            JmmNode arrayExpr = methodCallExpr.getChildren().get(0);
-            JmmNode indexExpr = methodCallExpr.getChildren().get(1);
-
-            TypeUtils typeUtils = new TypeUtils(table);
-            Type arrayExpressionType = typeUtils.getExprType(arrayExpr);
-
-            if (arrayExpressionType.isArray()) { // Only check indexing if it's an array
-                Type indexType = typeUtils.getExprType(indexExpr);
-                if (!indexType.getName().equals("int")) {
-                    addReport(newError(methodCallExpr, "Array index must be of type 'int'"));
-                }
-            }
-
-            // Array access
-            if (!indexExpr.getKind().equals(Kind.IDENTIFIER.getNodeName())) {
-                String arrayVarName = arrayExpr.get("name");
-                String arrayType = null;
-
-                for (Symbol localVar : table.getLocalVariables(currentMethod)) {
-                    if (localVar.getName().equals(arrayVarName)) {
-                        arrayType = String.valueOf(localVar.getType());
-                        break;
-                    }
-                }
-
-                if (arrayType == null) { //HERE
-                    addReport(newError(methodCallExpr, "Array variable '" + arrayVarName + "' is not declared."));
-                    return null;
-                }
-
-                // Check if it's an array type
-                if (!arrayType.contains("isArray=true")) {
-                    addReport(newError(methodCallExpr, "Cannot access an index on a non-array type: " + arrayType));
-                    return null;
-                }
-
-                boolean isInt = arrayType.contains("name=int");
-
-                if (!isInt) {
-                    addReport(newError(methodCallExpr, "Array index must be of type 'int'"));
-                }
-
-            } else {
-                // Method Call
-                JmmNode identifierNode = methodCallExpr.getChildren().stream()
-                        .filter(child -> (child.getKind().equals(Kind.IDENTIFIER.getNodeName()) || child.getKind().equals(Kind.THIS_REFERENCE.getNodeName())))
-                        .findFirst()
-                        .orElse(null);
-
-                if (identifierNode == null) {
-                    addReport(newError(methodCallExpr, "Method call is missing an identifier or this_reference."));
-                    return null;
-                }
-
-                String methodName;
-                if (identifierNode.getKind().equals(Kind.THIS_REFERENCE.getNodeName())) {
-                    methodName = methodCallExpr.get("name");
-                } else {
-                    methodName = identifierNode.get("name");
-                }
-
-                // Verify if the method is declared
-                if (isNotDeclaredMethod(methodName, table)) {
-                    addReport(newError(methodCallExpr, "Method '" + methodName + "' is not declared or accessible."));
-                    return null;
-                }
-            }
-        } else if (methodCallExpr.getChildren().size() >= 2) { // Method call
+        } else {
+            // Method call with receiver and/or arguments
             JmmNode identifierNode = methodCallExpr.getChildren().stream()
-                    .filter(child -> (child.getKind().equals(Kind.IDENTIFIER.getNodeName()) || child.getKind().equals(Kind.THIS_REFERENCE.getNodeName())))
+                    .filter(child -> (child.getKind().equals(Kind.IDENTIFIER.getNodeName())
+                            || child.getKind().equals(Kind.THIS_REFERENCE.getNodeName())))
                     .findFirst()
                     .orElse(null);
 
@@ -167,11 +108,53 @@ public class MethodCallVerificationVisitor extends AnalysisVisitor {
             // Verify if the method is declared
             if (isNotDeclaredMethod(methodName, table)) {
                 addReport(newError(methodCallExpr, "Method '" + methodName + "' is not declared or accessible."));
-                return null;
+            }
+        }
+
+        return null;
+    }
+
+    private Void visitArrayAccessExpr(JmmNode arrayAccessExpr, SymbolTable table) {
+        if (arrayAccessExpr.getChildren().size() != 2) {
+            addReport(newError(arrayAccessExpr, "Array access must have exactly two children: array and index."));
+            return null;
+        }
+
+        JmmNode arrayExpr = arrayAccessExpr.getChildren().get(0);
+        JmmNode indexExpr = arrayAccessExpr.getChildren().get(1);
+
+        // Check if index is of integer type
+        TypeUtils typeUtils = new TypeUtils(table);
+        Type indexType = typeUtils.getExprType(indexExpr);
+        if (!indexType.getName().equals("int")) {
+            addReport(newError(arrayAccessExpr, "Array index must be of type 'int'"));
+        }
+
+        // Check if array variable is declared and is of array type
+        Type arrayExpressionType = typeUtils.getExprType(arrayExpr);
+        if (!arrayExpressionType.isArray()) {
+            addReport(newError(arrayAccessExpr, "Cannot access an index on a non-array type"));
+        }
+
+        // For the case where array is a variable
+        if (arrayExpr.getKind().equals(Kind.IDENTIFIER.getNodeName())) {
+            String arrayVarName = arrayExpr.get("name");
+            boolean foundVar = false;
+
+            // Check in local variables
+            for (Symbol localVar : table.getLocalVariables(currentMethod)) {
+                if (localVar.getName().equals(arrayVarName)) {
+                    foundVar = true;
+                    if (!localVar.getType().isArray()) {
+                        addReport(newError(arrayAccessExpr, "Variable '" + arrayVarName + "' is not an array."));
+                    }
+                    break;
+                }
             }
 
-        } else {
-            addReport(newError(methodCallExpr, "Unexpected number of children for method call."));
+            if (!foundVar) {
+                addReport(newError(arrayAccessExpr, "Array variable '" + arrayVarName + "' is not declared."));
+            }
         }
 
         return null;

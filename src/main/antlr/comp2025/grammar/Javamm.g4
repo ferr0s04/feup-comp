@@ -77,7 +77,7 @@ param
     ;
 
 stmt
-    : expr ';'                       # ExprStmt
+    : expr ';'                        # ExprStmt
     | 'return' expr? ';'              # ReturnStmt
     | '{' (stmt)* '}'                 # BlockStmt
     | IF '(' expr ')' stmt (ELSEIF '(' expr ')' stmt )* (ELSE stmt)?  # IfStmt
@@ -94,9 +94,9 @@ expr
     | '!' expr                                      # UnaryOp
     | NEW 'int' '[' expr ']'                        # NewArray
     | NEW name=ID '(' ')'                           # NewObject
-    | expr '.' length=ID                            # LengthStmt
-    | expr '.' name=ID '(' (expr (',' expr)*)? ')'  # AccessOrCall
-    | expr '[' expr ']'                             # AccessOrCall
+    | expr '.' length=ID                            # LengthAccess
+    | expr '.' name=ID '(' (expr (',' expr)*)? ')'  # MethodCall
+    | expr '[' expr ']'                             # ArrayAccess
     | expr op=('*' | '/') expr                      # BinaryOp
     | expr op=('+' | '-') expr                      # BinaryOp
     | expr op=('<' | '>') expr                      #BinaryOp

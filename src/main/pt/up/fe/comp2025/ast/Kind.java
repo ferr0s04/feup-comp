@@ -26,7 +26,8 @@ public enum Kind {
     LITERAL,
     UNARY_OP,
     PRIMARY,
-    ACCESS_OR_CALL,
+    ARRAY_ACCESS,
+    METHOD_CALL,
     IDENTIFIER,
     THIS_REFERENCE,
     IMPORT_DECL,
@@ -39,7 +40,7 @@ public enum Kind {
     ASSIGN_STMT,
     INCREMENT,
     STRING,
-    LENGTH_STMT;
+    LENGTH_ACCESS;
 
     private final String name;
 

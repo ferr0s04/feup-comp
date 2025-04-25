@@ -85,9 +85,9 @@ public class TypeUtils {
             case LITERAL, STRING -> inferLiteralType(expr);
             case BINARY_OP -> inferBinaryOpType(expr);
             case IDENTIFIER -> lookupVariableType(expr);
-            case ACCESS_OR_CALL -> inferArrayAccessType(expr);
+            case ARRAY_ACCESS -> inferArrayAccessType(expr);
             case METHOD_DECL -> lookupMethodReturnType(expr);
-            case PRIMARY, LENGTH_STMT -> inferPrimaryType(expr);
+            case PRIMARY, LENGTH_ACCESS -> inferPrimaryType(expr);
             case ASSIGN_STMT -> {
                 lookupAssignStmt(expr);
                 yield newVoidType();
@@ -117,6 +117,13 @@ public class TypeUtils {
                 yield idType;
             }
             case UNARY_OP -> inferUnaryOpType(expr);
+            case METHOD_CALL -> {
+                // Handle method calls
+                String methodName = expr.get("name");
+                Type returnType = lookupMethodReturnType(expr);
+                yield returnType;
+            }
+
             default -> throw new IllegalArgumentException("Unsupported expression type: " + kind);
         };
     }
@@ -155,7 +162,7 @@ public class TypeUtils {
         }
 
         // Length
-        if (primaryNode.getKind().equals("LengthStmt")) {
+        if (primaryNode.getKind().equals("LengthAccess")) {
             return new Type(primaryNode.get("length"), false);
         }
 

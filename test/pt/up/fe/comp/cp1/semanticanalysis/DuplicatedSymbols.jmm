@@ -1,0 +1,12 @@
+class DuplicatedSymbols {
+
+    public int foo() {
+        int x;
+        int x;
+        return 0;
+    }
+
+    public int foo() {
+        return 1;
+    }
+}

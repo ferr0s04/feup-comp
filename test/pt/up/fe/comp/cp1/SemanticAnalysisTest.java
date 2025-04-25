@@ -543,4 +543,33 @@ public class SemanticAnalysisTest {
         TestUtils.noErrors(result);
     }
 
+    @Test
+    public void DuplicatedSymbols() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/DuplicatedSymbols.jmm"));
+        TestUtils.mustFail(result);
+        System.out.println(result.getReports());
+    }
+
+    /*@Test
+    public void TwoReturns() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/TwoReturns.jmm"));
+        TestUtils.mustFail(result);
+        System.out.println(result.getReports());
+    }*/
+
+    @Test
+    public void ThisReference() {
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/ThisReference.jmm"));
+        TestUtils.noErrors(result);
+    }
+
+    @Test
+    public void ArrayAccessNotMethodCall() {
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/ArrayAccessNotMethodCall.jmm"));
+        TestUtils.noErrors(result);
+    }
+
+
 }
