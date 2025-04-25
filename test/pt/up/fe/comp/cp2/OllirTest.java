@@ -8,11 +8,11 @@ import org.specs.comp.ollir.OperationType;
 import org.specs.comp.ollir.inst.*;
 import org.specs.comp.ollir.type.BuiltinKind;
 import pt.up.fe.comp.CpUtils;
-import pt.up.fe.comp.TestUtils;
 import pt.up.fe.comp.jmm.ollir.OllirResult;
 import pt.up.fe.specs.util.SpecsIo;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.stream.Collectors;
 
@@ -20,9 +20,10 @@ import static org.hamcrest.CoreMatchers.hasItem;
 import static org.junit.Assert.*;
 
 public class OllirTest {
+    private static final String BASE_PATH = "pt/up/fe/comp/cp2/ollir/";
 
     static OllirResult getOllirResult(String filename) {
-        return TestUtils.optimize(SpecsIo.getResource("pt/up/fe/comp/cp2/ollir/" + filename));
+        return CpUtils.getOllirResult(SpecsIo.getResource(BASE_PATH + filename), Collections.emptyMap(), false);
     }
 
     public void compileBasic(ClassUnit classUnit) {
@@ -169,28 +170,28 @@ public class OllirTest {
 
 
     @Test
-    public void section1_Basic_Class() {
+    public void basicClass() {
         var result = getOllirResult("basic/BasicClass.jmm");
 
         compileBasic(result.getOllirClass());
     }
 
     @Test
-    public void section1_Basic_Class_With_Fields() {
+    public void basicClassWithFields() {
         var result = getOllirResult("basic/BasicClassWithFields.jmm");
 
         compileBasic(result.getOllirClass());
     }
 
     @Test
-    public void section1_Basic_Assignment() {
+    public void basicAssignment() {
         var result = getOllirResult("basic/BasicAssignment.jmm");
 
         compileAssignment(result.getOllirClass());
     }
 
     @Test
-    public void section1_Basic_Method_Invocation() {
+    public void basicMethodInvocation() {
         var result = getOllirResult("basic/BasicMethodInvocation.jmm");
 
         compileMethodInvocation(result.getOllirClass());
@@ -199,7 +200,7 @@ public class OllirTest {
 
     /*checks if method declaration is correct (array)*/
     @Test
-    public void section1_Basic_Method_Declaration_Array() {
+    public void basicMethodDeclarationArray() {
         var result = getOllirResult("basic/BasicMethodsArray.jmm");
 
         var method = CpUtils.getMethod(result, "func4");
@@ -208,23 +209,24 @@ public class OllirTest {
     }
 
     @Test
-    public void section2_Arithmetic_Simple_add() {
+    public void arithmeticSimpleAdd() {
         var ollirResult = getOllirResult("arithmetic/Arithmetic_add.jmm");
 
         compileArithmetic(ollirResult.getOllirClass());
     }
 
     @Test
-    public void section2_Arithmetic_Simple_and() {
+    public void arithmeticSimpleAnd() {
         var ollirResult = getOllirResult("arithmetic/Arithmetic_and.jmm");
-
         var method = CpUtils.getMethod(ollirResult, "main");
+        var numBranches = CpUtils.getInstructions(CondBranchInstruction.class, method).size();
 
-        CpUtils.assertHasOperation(OperationType.ANDB, method, ollirResult);
+
+        CpUtils.assertTrue("Expected at least 2 branches, found " + numBranches, numBranches >= 2, ollirResult);
     }
 
     @Test
-    public void section2_Arithmetic_Simple_less() {
+    public void arithmeticSimpleLess() {
         var ollirResult = getOllirResult("arithmetic/Arithmetic_less.jmm");
 
         var method = CpUtils.getMethod(ollirResult, "main");
@@ -234,7 +236,7 @@ public class OllirTest {
     }
 
     @Test
-    public void section3_ControlFlow_If_Simple_Single_goto() {
+    public void controlFlowIfSimpleSingleGoTo() {
 
         var result = getOllirResult("control_flow/SimpleIfElseStat.jmm");
 
@@ -248,7 +250,7 @@ public class OllirTest {
     }
 
     @Test
-    public void section3_ControlFlow_If_Switch() {
+    public void controlFlowIfSwitch() {
 
         var result = getOllirResult("control_flow/SwitchStat.jmm");
 
@@ -262,7 +264,7 @@ public class OllirTest {
     }
 
     @Test
-    public void section3_ControlFlow_While_Simple() {
+    public void controlFlowWhileSimple() {
 
         var result = getOllirResult("control_flow/SimpleWhileStat.jmm");
 
@@ -276,7 +278,7 @@ public class OllirTest {
 
     /*checks if an array is correctly initialized*/
     @Test
-    public void section4_Arrays_Init_Array() {
+    public void arraysInitArray() {
         var result = getOllirResult("arrays/ArrayInit.jmm");
 
         var method = CpUtils.getMethod(result, "main");
@@ -300,7 +302,7 @@ public class OllirTest {
 
     /*checks if the access to the elements of array is correct*/
     @Test
-    public void section4_Arrays_Access_Array() {
+    public void arraysAccessArray() {
         var result = getOllirResult("arrays/ArrayAccess.jmm");
 
         var method = CpUtils.getMethod(result, "foo");
@@ -317,7 +319,7 @@ public class OllirTest {
 
     /*checks multiple expressions as indexes to access the elements of an array*/
     @Test
-    public void section4_Arrays_Load_ComplexArrayAccess() {
+    public void arraysLoadComplexArrayAccess() {
         // Just parse
         var result = getOllirResult("arrays/ComplexArrayAccess.jmm");
 
