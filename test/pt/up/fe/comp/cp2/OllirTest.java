@@ -58,7 +58,10 @@ public class OllirTest {
         assertTrue("Could not find a return instruction in method2", retInst2.isPresent());
     }
 
-    public void compileBasicWithFields(ClassUnit classUnit) {
+    public void compileBasicWithFields(OllirResult ollirResult) {
+
+        ClassUnit classUnit = ollirResult.getOllirClass();
+
         // Test name of the class and super
         assertEquals("Class name not what was expected", "CompileBasic", classUnit.getClassName());
         assertEquals("Super class name not what was expected", "Quicksort", classUnit.getSuperClass());
@@ -70,30 +73,29 @@ public class OllirTest {
         assertThat(fieldNames, hasItem(classUnit.getField(1).getFieldName()));
 
         // Test method 1
-        Method method1 = classUnit.getMethods().stream()
-                .filter(method -> method.getMethodName().equals("method1"))
-                .findFirst()
-                .orElse(null);
-
+        Method method1 = CpUtils.getMethod(ollirResult, "method1");
         assertNotNull("Could not find method1", method1);
 
-        var retInst1 = method1.getInstructions().stream()
-                .filter(inst -> inst instanceof ReturnInstruction)
-                .findFirst();
-        assertTrue("Could not find a return instruction in method1", retInst1.isPresent());
+        var method1GetField = CpUtils.getInstructions(GetFieldInstruction.class, method1);
+        assertTrue("Expected 1 getfield instruction in method1, found " + method1GetField.size(), method1GetField.size() == 1);
+
 
         // Test method 2
-        Method method2 = classUnit.getMethods().stream()
-                .filter(method -> method.getMethodName().equals("method2"))
-                .findFirst()
-                .orElse(null);
-
+        var method2 = CpUtils.getMethod(ollirResult, "method2");
         assertNotNull("Could not find method2'", method2);
 
-        var retInst2 = method2.getInstructions().stream()
-                .filter(inst -> inst instanceof ReturnInstruction)
-                .findFirst();
-        assertTrue("Could not find a return instruction in method2", retInst2.isPresent());
+        var method2GetField = CpUtils.getInstructions(GetFieldInstruction.class, method2);
+        assertTrue("Expected 0 getfield instruction in method2, found " + method2GetField.size(), method2GetField.isEmpty());
+
+        var method2PutField = CpUtils.getInstructions(PutFieldInstruction.class, method2);
+        assertTrue("Expected 0 putfield instruction in method2, found " + method2PutField.size(), method2PutField.isEmpty());
+
+        // Test method 3
+        var method3 = CpUtils.getMethod(ollirResult, "method3");
+        assertNotNull("Could not find method3'", method3);
+
+        var method3PutField = CpUtils.getInstructions(PutFieldInstruction.class, method3);
+        assertTrue("Expected 1 putfield instruction in method3, found " + method3PutField.size(), method3PutField.size() == 1);
     }
 
     public void compileArithmetic(ClassUnit classUnit) {
@@ -179,8 +181,9 @@ public class OllirTest {
     @Test
     public void basicClassWithFields() {
         var result = getOllirResult("basic/BasicClassWithFields.jmm");
+        System.out.println(result.getOllirCode());
 
-        compileBasic(result.getOllirClass());
+        compileBasicWithFields(result);
     }
 
     @Test
