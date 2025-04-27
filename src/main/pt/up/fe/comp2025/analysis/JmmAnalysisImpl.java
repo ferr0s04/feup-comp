@@ -40,6 +40,8 @@ public class JmmAnalysisImpl implements JmmAnalysis {
 
         var symbolTableBuilder = new JmmSymbolTableBuilder();
         SymbolTable table = symbolTableBuilder.build(rootNode);
+        System.out.println("Created symbol table: " + table);
+        System.out.println("Superclass in table: " + table.getSuper());
 
         List<Report> reports = symbolTableBuilder.getReports();
 

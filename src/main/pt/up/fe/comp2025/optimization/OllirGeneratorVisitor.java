@@ -1,9 +1,11 @@
 package pt.up.fe.comp2025.optimization;
 
+import pt.up.fe.comp.jmm.analysis.table.Symbol;
 import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
 import pt.up.fe.comp.jmm.analysis.table.Type;
 import pt.up.fe.comp.jmm.ast.AJmmVisitor;
 import pt.up.fe.comp.jmm.ast.JmmNode;
+import pt.up.fe.comp2025.ast.Kind;
 import pt.up.fe.comp2025.ast.TypeUtils;
 
 import java.util.stream.Collectors;
@@ -60,13 +62,35 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
     }
 
     private String visitClass(JmmNode node, Void unused) {
-        var sb = new StringBuilder();
-        sb.append(NL).append(table.getClassName()).append(L_BRACKET).append(NL)
-                .append(buildConstructor()).append(NL);
-        for (var m : node.getChildren(METHOD_DECL)) {
-            sb.append(visit(m, null));
+        String className = node.get("name");
+        String superClass = node.getOptional("extended").orElse(null);
+
+        StringBuilder sb = new StringBuilder();
+
+        // Class declaration
+        sb.append(className);
+        if (superClass != null) {
+            sb.append(" extends ").append(superClass);
         }
-        sb.append(R_BRACKET);
+        sb.append(" {\n\n");
+
+        // Add fields
+        for (Symbol field : table.getFields()) {
+            sb.append(".field ").append(field.getName())
+                    .append(ollirTypes.toOllirType(field.getType()))
+                    .append(";\n");
+        }
+        sb.append("\n");
+
+        // Add constructor
+        sb.append(buildConstructor()).append("\n");
+
+        // Process methods
+        for (JmmNode method : node.getChildren(Kind.METHOD_DECL)) {
+            sb.append(visit(method, null));
+        }
+
+        sb.append("}\n");
         return sb.toString();
     }
 
@@ -103,6 +127,9 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
     }
 
     private String visitParam(JmmNode node, Void unused) {
+        System.out.println("aaaa: "+ node.toString());
+        System.out.println("bbbb: "+ node.getChild(0));
+        System.out.println("aaaa2: "+ unused);
         // name:type
         return node.get("name") +
                 ollirTypes.toOllirType(types.convertType(node.getChild(0)));

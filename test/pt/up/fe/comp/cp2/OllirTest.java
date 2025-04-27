@@ -181,7 +181,9 @@ public class OllirTest {
     @Test
     public void basicClassWithFields() {
         var result = getOllirResult("basic/BasicClassWithFields.jmm");
+        System.out.println("///////////////");
         System.out.println(result.getOllirCode());
+        System.out.println("///////////////");
 
         compileBasicWithFields(result);
     }
@@ -189,6 +191,9 @@ public class OllirTest {
     @Test
     public void basicAssignment() {
         var result = getOllirResult("basic/BasicAssignment.jmm");
+        System.out.println("///////////////");
+        System.out.println(result.getOllirCode());
+        System.out.println("///////////////");
 
         compileAssignment(result.getOllirClass());
     }
