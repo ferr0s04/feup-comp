@@ -40,7 +40,8 @@ public enum Kind {
     ASSIGN_STMT,
     INCREMENT,
     STRING,
-    LENGTH_ACCESS;
+    LENGTH_ACCESS,
+    ARRAY_ASSIGN_STMT;
 
     private final String name;
 

@@ -58,6 +58,22 @@ public class TypeUtils {
         return imports.contains(type.getName());
     }
 
+    public boolean isImported(String name) {
+        var imports = table.getImports();
+        return imports.contains(name);
+    }
+
+    public boolean IsClass(Type type) {
+        var class_a = table.getClassName();
+        return type.getName().equals(class_a);
+    }
+
+    public boolean isClass(String typeName) {
+        var class_a = table.getClassName();
+        return typeName.equals(class_a);
+    }
+
+
 
 
     /**
@@ -90,6 +106,29 @@ public class TypeUtils {
             case PRIMARY, LENGTH_ACCESS -> inferPrimaryType(expr);
             case ASSIGN_STMT -> {
                 lookupAssignStmt(expr);
+                yield newVoidType();
+            }
+            case ARRAY_ASSIGN_STMT -> {
+                // New case for Array Assignment
+                JmmNode arrayNode = expr.getChild(0);  // Array (left-hand side)
+                JmmNode indexNode = expr.getChild(1);  // Index (left-hand side)
+                JmmNode valueNode = expr.getChild(2);  // Value to assign (right-hand side)
+
+                // Check array type
+                Type arrayType = getExprType(arrayNode);
+                if (!arrayType.isArray()) {
+                    throw new IllegalArgumentException("Left-hand side of array assignment must be an array type, but found: " + arrayType);
+                }
+
+                // Get element type of the array
+                Type elementType = new Type(arrayType.getName(), false);  // Array element type (non-array)
+
+                // Check the type of the value being assigned
+                Type valueType = getExprType(valueNode);
+                if (!valueType.equals(elementType)) {
+                    throw new IllegalArgumentException("Type mismatch: Cannot assign " + valueType.getName() + " to " + elementType.getName());
+                }
+
                 yield newVoidType();
             }
             case NEW_OBJECT -> {
@@ -245,13 +284,19 @@ public class TypeUtils {
                 .map(node -> node.get("name"))
                 .orElse(null);
 
-        // Ensure the variable is declared in the symbol table
+        // First, try to find it as a variable
         Type type = table.getVariableType(varName, methodName);
-        if (type == null) {
-            throw new IllegalArgumentException("Variable '" + varName + "' not declared in method '" + methodName + "'");
+        if (type != null) {
+            return type;
         }
 
-        return type;
+        // If not found, check if it's a known class name
+        if (table.getImports().contains(varName) || table.getClassName().equals(varName)) {
+            // Treat class names as object types (non-array)
+            return new Type(varName, false);
+        }
+
+        throw new IllegalArgumentException("Unknown variable or class: " + varName);
     }
 
     /**
@@ -291,13 +336,11 @@ public class TypeUtils {
 
         String methodName = methodNode.get("name");
 
-        // Ensure the method is declared in the symbol table
         Type type = table.getReturnType(methodName);
-        if (type == null) {
-            throw new IllegalArgumentException("Method '" + methodName + "' not declared");
+        if (type != null) {
+            return type;
         }
-
-        return type;
+        return new Type("void", false);
     }
 
     public void lookupAssignStmt(JmmNode assignStmt) {
@@ -340,4 +383,6 @@ public class TypeUtils {
             );
         }
     }
+
+
 }

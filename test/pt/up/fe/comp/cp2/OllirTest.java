@@ -181,7 +181,9 @@ public class OllirTest {
     @Test
     public void basicClassWithFields() {
         var result = getOllirResult("basic/BasicClassWithFields.jmm");
+        System.out.println("///////////////");
         System.out.println(result.getOllirCode());
+        System.out.println("///////////////");
 
         compileBasicWithFields(result);
     }
@@ -189,6 +191,9 @@ public class OllirTest {
     @Test
     public void basicAssignment() {
         var result = getOllirResult("basic/BasicAssignment.jmm");
+        System.out.println("///////////////");
+        System.out.println(result.getOllirCode());
+        System.out.println("///////////////");
 
         compileAssignment(result.getOllirClass());
     }
@@ -196,6 +201,10 @@ public class OllirTest {
     @Test
     public void basicMethodInvocation() {
         var result = getOllirResult("basic/BasicMethodInvocation.jmm");
+
+        System.out.println("///////////////");
+        System.out.println(result.getOllirCode());
+        System.out.println("///////////////");
 
         compileMethodInvocation(result.getOllirClass());
     }
@@ -215,6 +224,7 @@ public class OllirTest {
     public void arithmeticSimpleAdd() {
         var ollirResult = getOllirResult("arithmetic/Arithmetic_add.jmm");
 
+
         compileArithmetic(ollirResult.getOllirClass());
     }
 
@@ -223,7 +233,6 @@ public class OllirTest {
         var ollirResult = getOllirResult("arithmetic/Arithmetic_and.jmm");
         var method = CpUtils.getMethod(ollirResult, "main");
         var numBranches = CpUtils.getInstructions(CondBranchInstruction.class, method).size();
-
 
         CpUtils.assertTrue("Expected at least 2 branches, found " + numBranches, numBranches >= 2, ollirResult);
     }
@@ -307,6 +316,10 @@ public class OllirTest {
     @Test
     public void arraysAccessArray() {
         var result = getOllirResult("arrays/ArrayAccess.jmm");
+
+        System.out.println("///////////////");
+        System.out.println(result.getOllirCode());
+        System.out.println("///////////////");
 
         var method = CpUtils.getMethod(result, "foo");
 

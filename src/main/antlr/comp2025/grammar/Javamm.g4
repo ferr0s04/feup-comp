@@ -52,10 +52,10 @@ varDecl
     ;
 
 type locals[boolean isArray=false]
-    : value=INT '[' ']' { $isArray = true; }
-    | value=INT '...' { $isArray = true; }
-    | value=INT
-    | value=BOOLEAN
+    : name=INT '[' ']' { $isArray = true; }
+    | name=INT '...' { $isArray = true; }
+    | name=INT
+    | name=BOOLEAN
     | name=ID '[' ']' { $isArray = true; }
     | name=ID
     ;

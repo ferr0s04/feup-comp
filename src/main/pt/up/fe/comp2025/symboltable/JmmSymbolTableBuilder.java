@@ -66,11 +66,7 @@ public class JmmSymbolTableBuilder {
         this.className = classDecl.get("name");
 
         // Extract superclass (if any)
-        if (classDecl.hasAttribute("extended")) {
-            this.superClass = classDecl.get("extended");
-        } else {
-            this.superClass = null;
-        }
+        this.superClass = classDecl.getOptional("extended").orElse(null);
 
         // Extract class fields
         for (var varDecl : classDecl.getChildren(VAR_DECL)) {
@@ -81,6 +77,11 @@ public class JmmSymbolTableBuilder {
         for (var methodDecl : classDecl.getChildren(METHOD_DECL)) {
             processMethod(methodDecl);
         }
+
+        // In JmmSymbolTableBuilder.build():
+        System.out.println("Class declaration attributes: " + classDecl.getAttributes());
+        System.out.println("Building symbol table for class: " + className +
+                " extends " + superClass);  // Debug output
 
         return new JmmSymbolTable(className, superClass, imports, methods, returnTypes, parameters, localVariables, fields);
     }
@@ -132,19 +133,13 @@ public class JmmSymbolTableBuilder {
     }
 
     private Type extractType(JmmNode typeNode) {
-        if (typeNode.hasAttribute("name")) {
-            // Custom types (e.g., class names)
-            String typeName = typeNode.get("name");
-            boolean isArray = typeNode.hasAttribute("isArray") && typeNode.get("isArray").equals("true");
-            return new Type(typeName, isArray);
-        } else if (typeNode.hasAttribute("value")) {
-            // Primitive types
-            String typeName = typeNode.get("value");
-            boolean isArray = typeNode.hasAttribute("isArray") && typeNode.get("isArray").equals("true");
-            return new Type(typeName, isArray);
-        } else {
-            throw new IllegalArgumentException("Unexpected type node structure: " + typeNode);
+        if (!typeNode.hasAttribute("name")) {
+            throw new IllegalArgumentException("Type node is missing 'name' attribute: " + typeNode);
         }
+
+        String typeName = typeNode.get("name");
+        boolean isArray = typeNode.hasAttribute("isArray") && typeNode.get("isArray").equals("true");
+        return new Type(typeName, isArray);
     }
 
     private Symbol extractSymbol(JmmNode node) {
@@ -160,9 +155,10 @@ public class JmmSymbolTableBuilder {
     }
 
     private String extractImport(JmmNode importNode) {
-        String raw = importNode.get("name"); // "[a,b,c]"
-        String cleaned = raw.replaceAll("[\\[\\]\\s]", ""); // Remove brackets and spaces
-        return String.join(".", cleaned.split(",")); // Join by "."
+        // Get the import name directly from the node's children (ID tokens)
+        StringBuilder importName = new StringBuilder();
+        importName.append(importNode.get("name").replaceAll("[\\[\\]\\s]", ""));
+        return importName.toString();
     }
 
 }
