@@ -17,6 +17,7 @@ import static pt.up.fe.comp2025.ast.Kind.*;
  */
 public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
 
+    private int labelCounter = 0;
     private static final String SPACE     = " ";
     private static final String ASSIGN    = ":=";
     private final        String END_STMT  = ";\n";
@@ -50,8 +51,10 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         addVisit(ARRAY_ACCESS,  this::visitArrayAccessStmt);
         addVisit(LENGTH_ACCESS, this::visitLengthStmt);
         addVisit(UNARY_OP,      this::visitUnaryOpStmt);
+        addVisit(IF_STMT,       this::visitIfStmt);
+        addVisit(WHILE_STMT,    this::visitWhileStmt);
         addVisit(STMT,          this::visitStmt);
-        addVisit(IMPORT_DECL, this::visitImportDecl);
+        addVisit(IMPORT_DECL,   this::visitImportDecl);
         // fallback for ExprStmt, IfStmt, WhileStmt...
     }
 
@@ -214,6 +217,70 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         // empty or block
         return "";
     }
+
+    private String visitIfStmt(JmmNode node, Void unused) {
+        // [ condExpr, thenStmt, (elseStmt)? ]
+        var cond   = exprVisitor.visit(node.getChild(0));
+        StringBuilder sb = new StringBuilder();
+        String thenLabel = "then_"  + (labelCounter++);
+        String elseLabel = "else_"  + (labelCounter++);
+        String endLabel  = "endif_" + (labelCounter++);
+
+        // 1) compute condition
+        sb.append(cond.getComputation());
+        // 2) iffalse cond goto elseLabel;
+        sb.append("iffalse ")
+                .append(cond.getCode())
+                .append(" goto ")
+                .append(elseLabel)
+                .append(";")
+                .append("\n");
+        // 3) then-block
+        sb.append(visit(node.getChild(1), null));
+        // 4) jump past the else
+        sb.append("goto ")
+                .append(endLabel)
+                .append(";")
+                .append("\n");
+        // 5) elseLabel:
+        sb.append(elseLabel).append(":").append("\n");
+        if (node.getNumChildren() == 3) {
+            sb.append(visit(node.getChild(2), null));
+        }
+        // 6) endLabel:
+        sb.append(endLabel).append(":").append("\n");
+        return sb.toString();
+    }
+
+    private String visitWhileStmt(JmmNode node, Void unused) {
+        // [ condExpr, bodyStmt ]
+        var cond   = exprVisitor.visit(node.getChild(0));
+        StringBuilder sb = new StringBuilder();
+        String startLabel = "while_start_" + (labelCounter++);
+        String endLabel   = "while_end_"   + (labelCounter++);
+        // 1) loop head
+        sb.append(startLabel).append(":").append("\n");
+        // 2) compute cond
+        sb.append(cond.getComputation());
+        // 3) iffalse cond goto endLabel;
+        sb.append("iffalse ")
+                .append(cond.getCode())
+                .append(" goto ")
+                .append(endLabel)
+                .append(";")
+                .append("\n");
+        // 4) body
+        sb.append(visit(node.getChild(1), null));
+        // 5) jump back to head
+        sb.append("goto ")
+                .append(startLabel)
+                .append(";")
+                .append("\n");
+        // 6) endLabel:
+        sb.append(endLabel).append(":").append("\n");
+        return sb.toString();
+    }
+
 
 
     public String visitImportDecl(JmmNode node, Void unused) {

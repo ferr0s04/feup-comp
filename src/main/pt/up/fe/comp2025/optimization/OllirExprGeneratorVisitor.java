@@ -87,35 +87,38 @@ public class OllirExprGeneratorVisitor
 
         // Handle logical AND (&&)
         if ("&&".equals(operator)) {
-            String leftVar = left.getComputation();
-            String rightVar = right.getComputation();
             String tmpVar = ollirTypes.nextTemp() + ollirTypes.toOllirType(types.getExprType(node));
-
-            // generate a fresh label
             String endLabel = "end_and_" + (labelCounter++);
 
-            // Evaluate left operand
+            // 1) compute left
             comp.append(left.getComputation());
 
-            // Short-circuit: if left is false, skip evaluating right
-            comp.append("iffalse ").append(left.getCode()).append(" goto [").append(endLabel).append("]\n");
+            // 2) iffalse left goto endLabel;
+            comp.append("iffalse ")
+                    .append(left.getCode())
+                    .append(" goto ")
+                    .append(endLabel)
+                    .append(";")
+                    .append("\n");
 
-            // Evaluate right operand
+            // 3) compute right
             comp.append(right.getComputation());
 
-            // tmpVar = left && right
+            // 4) tmpVar := left &&.boolean right;
             comp.append(tmpVar).append(SPACE)
                     .append(ASSIGN).append(ollirTypes.toOllirType(types.getExprType(node))).append(SPACE)
                     .append(left.getCode()).append(" &&.boolean ").append(right.getCode())
                     .append(END_STMT);
 
-            // Label
-            comp.append("[").append(endLabel).append("]:\n");
+            // 5) emit the label
+            comp.append(endLabel)
+                    .append(":")
+                    .append("\n");
 
             return new OllirExprResult(tmpVar, comp);
         }
 
-        // Handle other operators (e.g., +, -, *, etc.)
+        // Fallback for other binary ops
         comp.append(left.getComputation());
         comp.append(right.getComputation());
 
@@ -132,6 +135,7 @@ public class OllirExprGeneratorVisitor
 
         return new OllirExprResult(resultTemp, comp);
     }
+
 
 
 
