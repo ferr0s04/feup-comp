@@ -202,6 +202,10 @@ public class OllirTest {
     public void basicMethodInvocation() {
         var result = getOllirResult("basic/BasicMethodInvocation.jmm");
 
+        System.out.println("///////////////");
+        System.out.println(result.getOllirCode());
+        System.out.println("///////////////");
+
         compileMethodInvocation(result.getOllirClass());
     }
 
@@ -219,6 +223,10 @@ public class OllirTest {
     @Test
     public void arithmeticSimpleAdd() {
         var ollirResult = getOllirResult("arithmetic/Arithmetic_add.jmm");
+
+        System.out.println("///////////////");
+        System.out.println(ollirResult.getOllirCode());
+        System.out.println("///////////////");
 
         compileArithmetic(ollirResult.getOllirClass());
     }

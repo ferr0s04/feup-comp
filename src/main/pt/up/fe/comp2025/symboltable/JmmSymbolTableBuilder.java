@@ -155,9 +155,10 @@ public class JmmSymbolTableBuilder {
     }
 
     private String extractImport(JmmNode importNode) {
-        String raw = importNode.get("name"); // "[a,b,c]"
-        String cleaned = raw.replaceAll("[\\[\\]\\s]", ""); // Remove brackets and spaces
-        return String.join(".", cleaned.split(",")); // Join by "."
+        // Get the import name directly from the node's children (ID tokens)
+        StringBuilder importName = new StringBuilder();
+        importName.append(importNode.get("name").replaceAll("[\\[\\]\\s]", ""));
+        return importName.toString();
     }
 
 }

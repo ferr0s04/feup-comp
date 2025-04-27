@@ -65,48 +65,71 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
     }
 
     private String visitClass(JmmNode node, Void unused) {
-        String className = node.get("name");
-        String superClass = node.getOptional("extended").orElse(null);
-
         StringBuilder sb = new StringBuilder();
 
+        // Add imports first
+        for (JmmNode imp : node.getChildren(Kind.IMPORT_DECL)) {
+            sb.append(visit(imp, null));
+        }
+
         // Class declaration
+        String className = node.get("name");
+        String superClass = node.getOptional("extended").orElse(null);
         sb.append(className);
         if (superClass != null) {
             sb.append(" extends ").append(superClass);
         }
-        sb.append(" {\n\n");
+        sb.append(L_BRACKET).append(NL).append(NL);  // Use constants
 
-        // Add fields
+        // Add fields - MODIFIED to include public and proper type suffixes
         for (Symbol field : table.getFields()) {
-            sb.append(".field ").append(field.getName())
+            sb.append("    .field public ")  // Fixed indentation and added public
+                    .append(field.getName())
                     .append(ollirTypes.toOllirType(field.getType()))
                     .append(";\n");
         }
-        sb.append("\n");
+        sb.append(NL);
 
         // Add constructor
-        sb.append(buildConstructor()).append("\n");
+        sb.append(buildConstructor()).append(NL);
 
         // Process methods
         for (JmmNode method : node.getChildren(Kind.METHOD_DECL)) {
             sb.append(visit(method, null));
         }
 
-        sb.append("}\n");
+        sb.append(R_BRACKET).append(NL);
         return sb.toString();
     }
 
     private String visitMethodDecl(JmmNode node, Void unused) {
         var sb = new StringBuilder(".method ");
-        if (node.hasAttribute("isPublic") && node.get("isPublic").equals("true")) {sb.append("public ");}
-        sb.append(node.get("name"))
-                .append("(")
-                .append(node.getChildren(PARAM).stream()
-                        .map(p -> visit(p, null))
-                        .collect(Collectors.joining(", ")))
-                .append(")");
 
+        // Handle 'public' modifier
+        if (node.hasAttribute("isPublic") && node.get("isPublic").equals("true")) {
+            sb.append("public ");
+        }
+
+        // Handle 'static' modifier (for main method)
+        if (node.get("name").equals("main")) {
+            sb.append("static ");
+        }
+
+        sb.append(node.get("name")).append("(");
+
+        // Special case for main method
+        if (node.get("name").equals("main")) {
+            sb.append("args.array.String");
+        } else {
+            // Normal parameters
+            sb.append(node.getChildren(PARAM).stream()
+                    .map(p -> visit(p, null))
+                    .collect(Collectors.joining(", ")));
+        }
+
+        sb.append(")");
+
+        // Return type
         var maybeType = node.getChildren().stream()
                 .filter(c -> c.getKind().equals("Type"))
                 .findFirst();
@@ -117,15 +140,14 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
             sb.append(".V"); // Default void return
         }
 
+        sb.append(L_BRACKET);  // Use constant for " {\n"
 
-        sb.append(L_BRACKET).append("\n");
-
-
-        // method body
+        // Method body with proper indentation
         for (var stmt : node.getChildren(STMT)) {
-            sb.append("   ").append(visit(stmt, null));
+            sb.append("   ").append(visit(stmt, null));  // 3 spaces indent
         }
-        sb.append(R_BRACKET).append(NL);
+
+        sb.append(R_BRACKET).append(NL);  // Use constant for "}\n"
         return sb.toString();
     }
 
@@ -156,9 +178,55 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         Type t = types.getExprType(node.getChild(0));
         String ollirT = ollirTypes.toOllirType(t);
 
+        // Verificar se estamos atribuindo a um campo da classe ou a uma variável local
+        String methodName = getEnclosingMethod(node);
+        if (methodName != null) {
+            boolean isLocalOrParam = false;
+
+            // Verificar nos parâmetros
+            for (Symbol param : table.getParameters(methodName)) {
+                if (param.getName().equals(lhs)) {
+                    isLocalOrParam = true;
+                    break;
+                }
+            }
+
+            // Se não for parâmetro, verificar nas variáveis locais
+            if (!isLocalOrParam) {
+                for (Symbol local : table.getLocalVariables(methodName)) {
+                    if (local.getName().equals(lhs)) {
+                        isLocalOrParam = true;
+                        break;
+                    }
+                }
+            }
+
+            // Se não for uma variável local ou parâmetro, então é um campo da classe
+            if (!isLocalOrParam) {
+                // Field access - include type suffix
+                String fieldWithType = lhs + ollirT;
+                return rhs.getComputation() +
+                        "putfield(this, " + fieldWithType + ", " + rhs.getCode() + ").V" +
+                        END_STMT;
+            }
+        }
+
+        // Variável local ou parâmetro - usar atribuição normal
         return rhs.getComputation() +
                 lhs + ollirT + SPACE + ASSIGN + ollirT + SPACE + rhs.getCode() +
                 END_STMT;
+    }
+
+    // Método auxiliar para obter o nome do método que contém o nó atual
+    private String getEnclosingMethod(JmmNode node) {
+        JmmNode current = node;
+        while (current != null) {
+            if (current.getKind().equals("MethodDecl") && current.hasAttribute("name")) {
+                return current.get("name");
+            }
+            current = current.getParent();
+        }
+        return null;
     }
 
     private String visitReturnStmt(JmmNode node, Void unused) {
@@ -222,17 +290,16 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         // [ condExpr, thenStmt, (elseStmt)? ]
         var cond   = exprVisitor.visit(node.getChild(0));
         StringBuilder sb = new StringBuilder();
-        String thenLabel = "then_"  + (labelCounter++);
-        String elseLabel = "else_"  + (labelCounter++);
-        String endLabel  = "endif_" + (labelCounter++);
+        String thenLabel = "then"  + (labelCounter++);
+        String endLabel  = "endif" + (labelCounter++);
 
         // 1) compute condition
         sb.append(cond.getComputation());
-        // 2) iffalse cond goto elseLabel;
-        sb.append("iffalse ")
+        // 2) if cond goto elseLabel;
+        sb.append("if (")
                 .append(cond.getCode())
-                .append(" goto ")
-                .append(elseLabel)
+                .append(") goto ")
+                .append(thenLabel)
                 .append(";")
                 .append("\n");
         // 3) then-block
@@ -243,7 +310,7 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
                 .append(";")
                 .append("\n");
         // 5) elseLabel:
-        sb.append(elseLabel).append(":").append("\n");
+        sb.append(thenLabel).append(":").append("\n");
         if (node.getNumChildren() == 3) {
             sb.append(visit(node.getChild(2), null));
         }
@@ -262,8 +329,8 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         sb.append(startLabel).append(":").append("\n");
         // 2) compute cond
         sb.append(cond.getComputation());
-        // 3) iffalse cond goto endLabel;
-        sb.append("iffalse ")
+        // 3) if cond goto endLabel;
+        sb.append("if ")
                 .append(cond.getCode())
                 .append(" goto ")
                 .append(endLabel)
@@ -283,17 +350,17 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
 
 
 
-    public String visitImportDecl(JmmNode node, Void unused) {
-        // Simply return an empty string or handle the import as needed.
-        return "";
+    private String visitImportDecl(JmmNode node, Void unused) {
+        //System.out.println("Import node attributes: " + node.getAttributes());
+        //System.out.println("Import node children: " + node.getChildren());
+        String importName = node.get("name").replace(";", "").replaceAll("[\\[\\]]", "");
+        return "import " + importName + ";\n";
     }
 
 
     private String buildConstructor() {
-        return """
-            .construct %s().V {
-                invokespecial(this, "<init>").V;
-            }
-            """.formatted(table.getClassName());
+        return "    .construct %s().V {\n".formatted(table.getClassName()) +
+                "        invokespecial(this, \"<init>\").V;\n" +
+                "    }\n";
     }
 }

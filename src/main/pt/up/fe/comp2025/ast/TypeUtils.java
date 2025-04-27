@@ -245,13 +245,19 @@ public class TypeUtils {
                 .map(node -> node.get("name"))
                 .orElse(null);
 
-        // Ensure the variable is declared in the symbol table
+        // First, try to find it as a variable
         Type type = table.getVariableType(varName, methodName);
-        if (type == null) {
-            throw new IllegalArgumentException("Variable '" + varName + "' not declared in method '" + methodName + "'");
+        if (type != null) {
+            return type;
         }
 
-        return type;
+        // If not found, check if it's a known class name
+        if (table.getImports().contains(varName) || table.getClassName().equals(varName)) {
+            // Treat class names as object types (non-array)
+            return new Type(varName, false);
+        }
+
+        throw new IllegalArgumentException("Unknown variable or class: " + varName);
     }
 
     /**
@@ -291,13 +297,11 @@ public class TypeUtils {
 
         String methodName = methodNode.get("name");
 
-        // Ensure the method is declared in the symbol table
         Type type = table.getReturnType(methodName);
-        if (type == null) {
-            throw new IllegalArgumentException("Method '" + methodName + "' not declared");
+        if (type != null) {
+            return type;
         }
-
-        return type;
+        return new Type("void", false);
     }
 
     public void lookupAssignStmt(JmmNode assignStmt) {

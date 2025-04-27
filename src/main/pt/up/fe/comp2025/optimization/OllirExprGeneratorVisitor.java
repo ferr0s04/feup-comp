@@ -1,5 +1,6 @@
 package pt.up.fe.comp2025.optimization;
 
+import pt.up.fe.comp.jmm.analysis.table.Symbol;
 import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
 import pt.up.fe.comp.jmm.analysis.table.Type;
 import pt.up.fe.comp.jmm.ast.JmmNode;
@@ -55,6 +56,7 @@ public class OllirExprGeneratorVisitor
         String value = node.get("value");
 
         // If it's boolean, we must assign it to a temp
+        System.out.println(t.getName());
         if (t.getName().equals("boolean")) {
             String tmp = ollirTypes.nextTemp() + ollirType;
             StringBuilder comp = new StringBuilder();
@@ -75,7 +77,66 @@ public class OllirExprGeneratorVisitor
         String id = node.get("name");
         Type t = types.getExprType(node);
         String ollirType = ollirTypes.toOllirType(t);
+
+        // DEBUG
+        System.out.println("==== DEBUG visitVarRef ====");
+        System.out.println("ID: " + id);
+        System.out.println("Type: " + t.getName() + (t.isArray() ? "[]" : ""));
+
+        String methodName = getEnclosingMethod(node);
+        System.out.println("Enclosing method: " + methodName);
+
+        if (methodName != null) {
+            // Verificar se é um parâmetro ou variável local do método atual
+            boolean isLocalOrParam = false;
+
+            // Verificar nos parâmetros
+            for (Symbol param : table.getParameters(methodName)) {
+                if (param.getName().equals(id)) {
+                    isLocalOrParam = true;
+                    break;
+                }
+            }
+
+            // Se não for parâmetro, verificar nas variáveis locais
+            if (!isLocalOrParam) {
+                for (Symbol local : table.getLocalVariables(methodName)) {
+                    if (local.getName().equals(id)) {
+                        isLocalOrParam = true;
+                        break;
+                    }
+                }
+            }
+
+            // Se não for uma variável local ou parâmetro, então é um campo da classe
+            if (!isLocalOrParam) {
+                // Field access - include type suffix
+                String fieldWithType = id + ollirType;  // e.g., "intField.i32"
+                String tmp = ollirTypes.nextTemp() + ollirType;
+                StringBuilder comp = new StringBuilder();
+                comp.append(tmp).append(SPACE)
+                        .append(ASSIGN).append(ollirType).append(SPACE)
+                        .append("getfield(this, ").append(fieldWithType).append(")")
+                        .append(ollirType)
+                        .append(END_STMT);
+                return new OllirExprResult(tmp, comp);
+            }
+        }
+
+        // Variável local ou parâmetro - apenas retornar o nome com tipo
         return new OllirExprResult(id + ollirType);
+    }
+
+    // Método auxiliar para obter o nome do método que contém o nó atual
+    private String getEnclosingMethod(JmmNode node) {
+        JmmNode current = node;
+        while (current != null) {
+            if (current.getKind().equals("MethodDecl") && current.hasAttribute("name")) {
+                return current.get("name");
+            }
+            current = current.getParent();
+        }
+        return null;
     }
 
     private OllirExprResult visitBinExpr(JmmNode node, Void unused) {
@@ -93,10 +154,10 @@ public class OllirExprGeneratorVisitor
             // 1) compute left
             comp.append(left.getComputation());
 
-            // 2) iffalse left goto endLabel;
-            comp.append("iffalse ")
+            // 2) if left goto endLabel;
+            comp.append("if (")
                     .append(left.getCode())
-                    .append(" goto ")
+                    .append(") goto ")
                     .append(endLabel)
                     .append(";")
                     .append("\n");
@@ -107,7 +168,7 @@ public class OllirExprGeneratorVisitor
             // 4) tmpVar := left &&.boolean right;
             comp.append(tmpVar).append(SPACE)
                     .append(ASSIGN).append(ollirTypes.toOllirType(types.getExprType(node))).append(SPACE)
-                    .append(left.getCode()).append(" &&.boolean ").append(right.getCode())
+                    .append(left.getCode()).append(" &&.bool ").append(right.getCode())
                     .append(END_STMT);
 
             // 5) emit the label
@@ -168,21 +229,19 @@ public class OllirExprGeneratorVisitor
         comp.append(lenRes.getComputation());
         comp.append(tmp).append(SPACE)
                 .append(ASSIGN).append(ollirArr).append(SPACE)
-                .append("newarray(").append(lenRes.getCode()).append(")").append(ollirArr)
+                .append("new(array, ").append(lenRes.getCode()).append(")").append(ollirArr)
                 .append(END_STMT);
 
         return new OllirExprResult(tmp, comp);
     }
 
     private OllirExprResult visitMethodCall(JmmNode node, Void unused) {
-        // receiver and args
         JmmNode recv = node.getChild(0);
         var recvRes = visit(recv);
 
         StringBuilder comp = new StringBuilder();
         comp.append(recvRes.getComputation());
 
-        // arguments (if any)
         String argsCode = node.getChildren().stream()
                 .skip(1)
                 .map(child -> {
@@ -193,18 +252,48 @@ public class OllirExprGeneratorVisitor
                 .collect(Collectors.joining(", "));
 
         // return type
-        Type   retType  = types.getExprType(node);
+        Type retType = types.getExprType(node);
         String retOllir = ollirTypes.toOllirType(retType);
-        String tmp      = ollirTypes.nextTemp() + retOllir;
+        String tmp = ollirTypes.nextTemp() + retOllir;
+
+        String recvName = recvRes.getCode();
+        String methodName = node.get("name");
+
+        boolean isStatic = false;
+
+        // Treat io.println as static
+        if (recvName.equals("io") && methodName.equals("println")) {
+            isStatic = true;
+        }
 
         comp.append(tmp).append(SPACE)
-                .append(ASSIGN).append(retOllir).append(SPACE)
-                .append("invokevirtual(")
-                .append(recvRes.getCode()).append(", ")
-                .append(node.get("name")).append("(")
-                .append(argsCode).append("))")
-                .append(retOllir)
-                .append(END_STMT);
+                .append(ASSIGN).append(retOllir).append(SPACE);
+
+        if (isStatic) {
+            // call as static
+            comp.append("invokestatic(")
+                    .append(recvName).append(", \"")
+                    .append(methodName).append("\"");
+
+            if (!argsCode.isEmpty()) {
+                comp.append(", ").append(argsCode);
+            }
+
+            comp.append(")");
+        } else {
+            // call as virtual
+            comp.append("invokevirtual(")
+                    .append(recvName).append(", \"")
+                    .append(methodName).append("\"");
+
+            if (!argsCode.isEmpty()) {
+                comp.append(", ").append(argsCode);
+            }
+
+            comp.append(")");
+        }
+
+        comp.append(retOllir).append(END_STMT);
 
         return new OllirExprResult(tmp, comp);
     }
