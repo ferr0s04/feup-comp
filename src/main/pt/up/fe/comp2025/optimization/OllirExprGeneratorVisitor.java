@@ -251,26 +251,60 @@ public class OllirExprGeneratorVisitor
                 })
                 .collect(Collectors.joining(", "));
 
-        // return type
+        // Return type of the method
         Type retType = types.getExprType(node);
         String retOllir = ollirTypes.toOllirType(retType);
-        String tmp = ollirTypes.nextTemp() + retOllir;
 
-        String recvName = recvRes.getCode();
+        // If the method returns void, do not store the result in a temporary variable
+        if (retType.getName().equals("void")) {
+            String recvName = recvRes.getCode().replace("tmp0.", "");
+            String methodName = node.get("name");
+
+            boolean isStatic = node.getChildren().stream()
+                    .anyMatch(child -> table.getImports().stream()
+                            .anyMatch(imp -> imp.equals(child.get("name"))));
+
+            System.out.println("OLEEEE" + table.getImports());
+            System.out.println("isStatic: " + isStatic);
+
+            // Ensure we correctly handle static calls with the appropriate class or object
+            if (isStatic) {
+                comp.append("invokestatic(")
+                        .append(recvName).append(", \"")
+                        .append(methodName).append("\"");
+
+                if (!argsCode.isEmpty()) {
+                    comp.append(", ").append(argsCode);
+                }
+
+                comp.append(").V");  // Append .V for void return type
+            } else {
+                comp.append("invokevirtual(")
+                        .append(recvName).append(", \"")
+                        .append(methodName).append("\"");
+
+                if (!argsCode.isEmpty()) {
+                    comp.append(", ").append(argsCode);
+                }
+
+                comp.append(").V");  // Append .V for void return type
+            }
+            return new OllirExprResult("", comp);
+        }
+
+        // If method returns something other than void, handle the result as usual
+        String tmp = ollirTypes.nextTemp() + retOllir;
+        String recvName = recvRes.getCode().replace("tmp0.", "");
         String methodName = node.get("name");
 
-        boolean isStatic = false;
-
-        // Treat io.println as static
-        if (recvName.equals("io") && methodName.equals("println")) {
-            isStatic = true;
-        }
+        boolean isStatic = node.getChildren().stream()
+                .anyMatch(child -> table.getImports().stream()
+                        .anyMatch(imp -> imp.equals(child.get("name"))));
 
         comp.append(tmp).append(SPACE)
                 .append(ASSIGN).append(retOllir).append(SPACE);
 
         if (isStatic) {
-            // call as static
             comp.append("invokestatic(")
                     .append(recvName).append(", \"")
                     .append(methodName).append("\"");
@@ -279,9 +313,8 @@ public class OllirExprGeneratorVisitor
                 comp.append(", ").append(argsCode);
             }
 
-            comp.append(")");
+            comp.append(").V");
         } else {
-            // call as virtual
             comp.append("invokevirtual(")
                     .append(recvName).append(", \"")
                     .append(methodName).append("\"");
@@ -290,7 +323,7 @@ public class OllirExprGeneratorVisitor
                 comp.append(", ").append(argsCode);
             }
 
-            comp.append(")");
+            comp.append(").V");
         }
 
         comp.append(retOllir).append(END_STMT);

@@ -17,7 +17,13 @@ import static pt.up.fe.comp2025.ast.Kind.*;
  */
 public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
 
-    private int labelCounter = 0;
+    private int thenLabelCounter = 0;
+    private int endifLabelCounter = 0;
+    private int while_start_labelCounter = 0;
+    private int while_end_labelCounter = 0;
+
+
+
     private static final String SPACE     = " ";
     private static final String ASSIGN    = ":=";
     private final        String END_STMT  = ";\n";
@@ -111,14 +117,14 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         }
 
         // Handle 'static' modifier (for main method)
-        if (node.get("name").equals("main")) {
+        if (node.hasAttribute("isMain") && node.get("isMain").equals("true")) {
             sb.append("static ");
         }
 
         sb.append(node.get("name")).append("(");
 
         // Special case for main method
-        if (node.get("name").equals("main")) {
+        if (node.hasAttribute("isMain") && node.get("isMain").equals("true")) {
             sb.append("args.array.String");
         } else {
             // Normal parameters
@@ -147,7 +153,13 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
             sb.append("   ").append(visit(stmt, null));  // 3 spaces indent
         }
 
+        if(node.hasAttribute("isMain") && node.get("isMain").equals("true")){
+            sb.append("    ret.V;\n");
+        }
+
         sb.append(R_BRACKET).append(NL);  // Use constant for "}\n"
+
+
         return sb.toString();
     }
 
@@ -290,8 +302,8 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         // [ condExpr, thenStmt, (elseStmt)? ]
         var cond   = exprVisitor.visit(node.getChild(0));
         StringBuilder sb = new StringBuilder();
-        String thenLabel = "then"  + (labelCounter++);
-        String endLabel  = "endif" + (labelCounter++);
+        String thenLabel = "then"  + (thenLabelCounter++);
+        String endLabel  = "endif" + (endifLabelCounter++);
 
         // 1) compute condition
         sb.append(cond.getComputation());
@@ -320,31 +332,28 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
     }
 
     private String visitWhileStmt(JmmNode node, Void unused) {
-        // [ condExpr, bodyStmt ]
-        var cond   = exprVisitor.visit(node.getChild(0));
+        // Ensure the node has the correct structure for a while statement
+        if (node.getNumChildren() < 2) {
+            throw new IllegalArgumentException("While statement must have at least two children: condition and body");
+        }
+
+        // Extract condition expression and body statement
+        var cond = exprVisitor.visit(node.getChild(0));  // Visit the condition of the while
+        var body = node.getChild(1);  // Body of the while loop
+
+        // Generate unique labels for start and end of the loop
+        String startLabel = "while_start_" + (while_start_labelCounter++);
+        String endLabel = "while_end_" + (while_end_labelCounter++);
+
         StringBuilder sb = new StringBuilder();
-        String startLabel = "while_start_" + (labelCounter++);
-        String endLabel   = "while_end_"   + (labelCounter++);
-        // 1) loop head
-        sb.append(startLabel).append(":").append("\n");
-        // 2) compute cond
+
+        sb.append(startLabel).append(":").append(NL);
         sb.append(cond.getComputation());
-        // 3) if cond goto endLabel;
-        sb.append("if ")
-                .append(cond.getCode())
-                .append(" goto ")
-                .append(endLabel)
-                .append(";")
-                .append("\n");
-        // 4) body
-        sb.append(visit(node.getChild(1), null));
-        // 5) jump back to head
-        sb.append("goto ")
-                .append(startLabel)
-                .append(";")
-                .append("\n");
-        // 6) endLabel:
-        sb.append(endLabel).append(":").append("\n");
+        sb.append("if (").append(cond.getCode()).append(") goto ").append(endLabel).append(";").append(NL);
+        sb.append(visit(body, null));
+        sb.append("goto ").append(startLabel).append(";").append(NL);
+        sb.append(endLabel).append(":").append(NL);
+
         return sb.toString();
     }
 
