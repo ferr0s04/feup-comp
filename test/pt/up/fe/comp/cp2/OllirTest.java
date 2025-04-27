@@ -237,7 +237,6 @@ public class OllirTest {
         var method = CpUtils.getMethod(ollirResult, "main");
         var numBranches = CpUtils.getInstructions(CondBranchInstruction.class, method).size();
 
-
         CpUtils.assertTrue("Expected at least 2 branches, found " + numBranches, numBranches >= 2, ollirResult);
     }
 
@@ -320,6 +319,8 @@ public class OllirTest {
     @Test
     public void arraysAccessArray() {
         var result = getOllirResult("arrays/ArrayAccess.jmm");
+
+
 
         var method = CpUtils.getMethod(result, "foo");
 

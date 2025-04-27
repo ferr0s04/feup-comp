@@ -149,7 +149,7 @@ public class OllirExprGeneratorVisitor
         // Handle logical AND (&&)
         if ("&&".equals(operator)) {
             String tmpVar = ollirTypes.nextTemp() + ollirTypes.toOllirType(types.getExprType(node));
-            String endLabel = "end_and_" + (labelCounter++);
+            String endLabel = "end" + (labelCounter++);
 
             // 1) compute left
             comp.append(left.getComputation());
@@ -257,7 +257,7 @@ public class OllirExprGeneratorVisitor
 
         // If the method returns void, do not store the result in a temporary variable
         if (retType.getName().equals("void")) {
-            String recvName = recvRes.getCode().replace("tmp0.", "");
+            String recvName = recvRes.getCode().replaceAll("^tmp\\d+\\.", "");
             String methodName = node.get("name");
 
             boolean isStatic = node.getChildren().stream()

@@ -323,8 +323,20 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
                 .append("\n");
         // 5) elseLabel:
         sb.append(thenLabel).append(":").append("\n");
-        if (node.getNumChildren() == 3) {
+        System.out.println("qqqqqqqqqq " + node.getNumChildren());
+        /*if (node.getNumChildren() == 3) {
             sb.append(visit(node.getChild(2), null));
+        }*/
+        if (node.getNumChildren() > 2) {
+            for (int a = 2; a < node.getNumChildren(); a++) {
+                System.out.println("caranguejo: " + node.getChild(a).getChildren());
+                if(node.getChild(a).getKind().equals("BlockStmt")) {
+                    for (int i = 0; i < node.getChild(a).getNumChildren(); i++) {
+                        sb.append(visit(node.getChild(a).getChild(i), null));
+                    }
+                }
+                //sb.append(visit(visitIfStmt(node.getChild(a).getChildren(), null), null));
+            }
         }
         // 6) endLabel:
         sb.append(endLabel).append(":").append("\n");
