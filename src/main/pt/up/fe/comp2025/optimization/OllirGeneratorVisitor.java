@@ -61,6 +61,7 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         addVisit(WHILE_STMT,    this::visitWhileStmt);
         addVisit(STMT,          this::visitStmt);
         addVisit(IMPORT_DECL,   this::visitImportDecl);
+        addVisit(ARRAY_ASSIGN_STMT, this::visitAssignStmt);
         // fallback for ExprStmt, IfStmt, WhileStmt...
     }
 
@@ -185,17 +186,22 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
     }
 
     private String visitAssignStmt(JmmNode node, Void unused) {
-        var rhs = exprVisitor.visit(node.getChild(0));
-        var lhs = node.get("name");
-        Type t = types.getExprType(node.getChild(0));
-        String ollirT = ollirTypes.toOllirType(t);
+        var rhs = exprVisitor.visit(node.getChild(0));  // Right-hand side expression
+        var lhs = node.get("name");  // Left-hand side variable or array
+        Type t = types.getExprType(node.getChild(0));  // Type of the right-hand side expression
+        String ollirT = ollirTypes.toOllirType(t);  // OLLIR type of the right-hand side expression
 
-        // Verificar se estamos atribuindo a um campo da classe ou a uma variável local
+        // Check if the left-hand side is an array (Array assignment)
+        if (node.getKind().equals("ArrayAssignStmt")) {
+            return visitArrayAssignStmt(node, rhs, ollirT);  // Delegate to array-specific handling
+        }
+
+        // Handle regular variable assignments
         String methodName = getEnclosingMethod(node);
         if (methodName != null) {
             boolean isLocalOrParam = false;
 
-            // Verificar nos parâmetros
+            // Check parameters first
             for (Symbol param : table.getParameters(methodName)) {
                 if (param.getName().equals(lhs)) {
                     isLocalOrParam = true;
@@ -203,7 +209,7 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
                 }
             }
 
-            // Se não for parâmetro, verificar nas variáveis locais
+            // If it's not a parameter, check local variables
             if (!isLocalOrParam) {
                 for (Symbol local : table.getLocalVariables(methodName)) {
                     if (local.getName().equals(lhs)) {
@@ -213,9 +219,9 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
                 }
             }
 
-            // Se não for uma variável local ou parâmetro, então é um campo da classe
+            // If it's not a local variable or parameter, then it's a field
             if (!isLocalOrParam) {
-                // Field access - include type suffix
+                // Field assignment
                 String fieldWithType = lhs + ollirT;
                 return rhs.getComputation() +
                         "putfield(this, " + fieldWithType + ", " + rhs.getCode() + ").V" +
@@ -223,10 +229,23 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
             }
         }
 
-        // Variável local ou parâmetro - usar atribuição normal
+        // Local variable or parameter assignment
         return rhs.getComputation() +
                 lhs + ollirT + SPACE + ASSIGN + ollirT + SPACE + rhs.getCode() +
                 END_STMT;
+    }
+
+    private String visitArrayAssignStmt(JmmNode node, OllirExprResult rhs, String ollirT) {
+        String arrayName = node.get("name");
+
+        JmmNode indexNode = node.getChild(0);
+        String indexValue = indexNode.get("value");
+
+        JmmNode valueNode = node.getChild(1);
+        String value = valueNode.get("value");
+
+        return arrayName + "[" + indexValue + ollirT + "]" + ollirT +
+                " :=" + ollirT + " " + value + ollirT + END_STMT;
     }
 
     // Método auxiliar para obter o nome do método que contém o nó atual

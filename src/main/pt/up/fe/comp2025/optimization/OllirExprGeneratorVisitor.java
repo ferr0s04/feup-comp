@@ -211,7 +211,7 @@ public class OllirExprGeneratorVisitor
         StringBuilder comp = new StringBuilder();
         comp.append(tmp).append(SPACE)
                 .append(ASSIGN).append(ollirT).append(SPACE)
-                .append("new ").append(className).append("()").append(ollirT)
+                .append("new(").append(className).append(")").append(ollirT)
                 .append(END_STMT);
 
         return new OllirExprResult(tmp, comp);
@@ -298,6 +298,7 @@ public class OllirExprGeneratorVisitor
         String methodName = node.get("name");
 
         boolean isStatic = node.getChildren().stream()
+                .filter(child -> !child.getKind().equals("Literal"))
                 .anyMatch(child -> table.getImports().stream()
                         .anyMatch(imp -> imp.equals(child.get("name"))));
 
@@ -332,21 +333,25 @@ public class OllirExprGeneratorVisitor
     }
 
     private OllirExprResult visitArrayAccess(JmmNode node, Void unused) {
-        var arrRes = visit(node.getChild(0));
-        var idxRes = visit(node.getChild(1));
+        // Visit the array and index expressions
+        var arrRes = visit(node.getChild(0)); // array
+        var idxRes = visit(node.getChild(1)); // index
 
+        // Prepare the computation part
         StringBuilder comp = new StringBuilder();
         comp.append(arrRes.getComputation()).append(idxRes.getComputation());
 
-        Type   elemType = types.getExprType(node);
-        String elemO    = ollirTypes.toOllirType(elemType);
-        String tmp      = ollirTypes.nextTemp() + elemO;
+        // Get the element type for the array access
+        Type elemType = types.getExprType(node);
+        String elemO = ollirTypes.toOllirType(elemType);
+        String tmp = ollirTypes.nextTemp() + elemO;
 
+        // Generate the array access code
         comp.append(tmp).append(SPACE)
                 .append(ASSIGN).append(elemO).append(SPACE)
-                .append("arrayload(").append(arrRes.getCode())
-                .append(", ").append(idxRes.getCode())
-                .append(")").append(elemO)
+                .append(arrRes.getCode())  // Array part
+                .append("[").append(idxRes.getCode())  // Index part
+                .append("]").append(elemO)  // Closing bracket
                 .append(END_STMT);
 
         return new OllirExprResult(tmp, comp);

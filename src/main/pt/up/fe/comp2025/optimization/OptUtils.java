@@ -58,7 +58,13 @@ public class OptUtils {
             case "boolean" -> "bool";
             case "String"  -> "string";
             case "void"    -> "V";
-            default        -> throw new NotImplementedException(typeName);
+            default        -> {
+                if (types.isImported(typeName) || types.isClass(typeName)) {
+                    yield typeName;
+                } else {
+                    throw new NotImplementedException("Type " + typeName + " not implemented");
+                }
+            }
         };
         return type;
     }

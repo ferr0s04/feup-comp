@@ -224,9 +224,6 @@ public class OllirTest {
     public void arithmeticSimpleAdd() {
         var ollirResult = getOllirResult("arithmetic/Arithmetic_add.jmm");
 
-        System.out.println("///////////////");
-        System.out.println(ollirResult.getOllirCode());
-        System.out.println("///////////////");
 
         compileArithmetic(ollirResult.getOllirClass());
     }
@@ -320,7 +317,9 @@ public class OllirTest {
     public void arraysAccessArray() {
         var result = getOllirResult("arrays/ArrayAccess.jmm");
 
-
+        System.out.println("///////////////");
+        System.out.println(result.getOllirCode());
+        System.out.println("///////////////");
 
         var method = CpUtils.getMethod(result, "foo");
 

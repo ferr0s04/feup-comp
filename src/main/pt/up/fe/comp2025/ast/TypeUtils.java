@@ -58,6 +58,22 @@ public class TypeUtils {
         return imports.contains(type.getName());
     }
 
+    public boolean isImported(String name) {
+        var imports = table.getImports();
+        return imports.contains(name);
+    }
+
+    public boolean IsClass(Type type) {
+        var class_a = table.getClassName();
+        return type.getName().equals(class_a);
+    }
+
+    public boolean isClass(String typeName) {
+        var class_a = table.getClassName();
+        return typeName.equals(class_a);
+    }
+
+
 
 
     /**
@@ -90,6 +106,29 @@ public class TypeUtils {
             case PRIMARY, LENGTH_ACCESS -> inferPrimaryType(expr);
             case ASSIGN_STMT -> {
                 lookupAssignStmt(expr);
+                yield newVoidType();
+            }
+            case ARRAY_ASSIGN_STMT -> {
+                // New case for Array Assignment
+                JmmNode arrayNode = expr.getChild(0);  // Array (left-hand side)
+                JmmNode indexNode = expr.getChild(1);  // Index (left-hand side)
+                JmmNode valueNode = expr.getChild(2);  // Value to assign (right-hand side)
+
+                // Check array type
+                Type arrayType = getExprType(arrayNode);
+                if (!arrayType.isArray()) {
+                    throw new IllegalArgumentException("Left-hand side of array assignment must be an array type, but found: " + arrayType);
+                }
+
+                // Get element type of the array
+                Type elementType = new Type(arrayType.getName(), false);  // Array element type (non-array)
+
+                // Check the type of the value being assigned
+                Type valueType = getExprType(valueNode);
+                if (!valueType.equals(elementType)) {
+                    throw new IllegalArgumentException("Type mismatch: Cannot assign " + valueType.getName() + " to " + elementType.getName());
+                }
+
                 yield newVoidType();
             }
             case NEW_OBJECT -> {
@@ -344,4 +383,6 @@ public class TypeUtils {
             );
         }
     }
+
+
 }
