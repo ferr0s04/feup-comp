@@ -24,19 +24,37 @@ public class JmmOptimizationImpl implements JmmOptimization {
 
     @Override
     public JmmSemanticsResult optimize(JmmSemanticsResult semanticsResult) {
+        // Check if optimization is enabled
+        var optimizeFlag = semanticsResult.getConfig()
+                .getOrDefault("optimize", "false")
+                .equals("true");
 
-        //TODO: Do your AST-based optimizations here
+        if (!optimizeFlag) {
+            return semanticsResult;
+        }
 
-        return semanticsResult;
+        // Apply AST-level optimizations in-place
+        var optimizer = new AstOptimizerVisitor();
+        optimizer.visit(semanticsResult.getRootNode());
+
+        // Return the updated semantics result (AST is modified in-place)
+        return new JmmSemanticsResult(
+                semanticsResult.getRootNode(),
+                semanticsResult.getSymbolTable(),
+                semanticsResult.getReports(),
+                semanticsResult.getConfig()
+        );
     }
+
+
 
     @Override
     public OllirResult optimize(OllirResult ollirResult) {
-
-        //TODO: Do your OLLIR-based optimizations here
-
-        return ollirResult;
+        return new OllirOptimizer().optimize(ollirResult);
     }
+
+
+
 
 
 }
