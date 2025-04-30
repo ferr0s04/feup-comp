@@ -62,6 +62,7 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         addVisit(STMT,          this::visitStmt);
         addVisit(IMPORT_DECL,   this::visitImportDecl);
         addVisit(ARRAY_ASSIGN_STMT, this::visitAssignStmt);
+        addVisit(LITERAL,      this::visitLiteral);
         // fallback for ExprStmt, IfStmt, WhileStmt...
     }
 
@@ -395,6 +396,11 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         //System.out.println("Import node children: " + node.getChildren());
         String importName = node.get("name").replace(";", "").replaceAll("[\\[\\]]", "");
         return "import " + importName + ";\n";
+    }
+
+    private String visitLiteral(JmmNode node, Void unused) {
+        // Retorna o valor do literal com o sufixo apropriado
+        return node.get("value") + ".i32";
     }
 
 

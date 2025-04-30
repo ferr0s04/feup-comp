@@ -1,4 +1,4 @@
-package pt.up.fe.comp2025.optimization;
+package pt.up.fe.comp2025.optimization.optimi;
 
 import org.specs.comp.ollir.Method;
 import pt.up.fe.comp.jmm.ollir.OllirResult;
@@ -6,7 +6,7 @@ import pt.up.fe.comp.jmm.ollir.OllirResult;
 import java.util.HashMap;
 import java.util.Map;
 
-public class OllirOptimizer {
+public class OllirOptimizerVisitor {
 
     public OllirResult optimize(OllirResult ollirResult) {
         var classUnit = ollirResult.getOllirClass();

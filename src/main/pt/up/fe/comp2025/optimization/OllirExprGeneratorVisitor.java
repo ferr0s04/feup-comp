@@ -198,9 +198,6 @@ public class OllirExprGeneratorVisitor
     }
 
 
-
-
-
     private OllirExprResult visitNewObject(JmmNode node, Void unused) {
         // new ClassName()
         String className = node.get("name");

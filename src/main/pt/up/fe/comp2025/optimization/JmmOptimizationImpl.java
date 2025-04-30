@@ -3,6 +3,8 @@ package pt.up.fe.comp2025.optimization;
 import pt.up.fe.comp.jmm.analysis.JmmSemanticsResult;
 import pt.up.fe.comp.jmm.ollir.JmmOptimization;
 import pt.up.fe.comp.jmm.ollir.OllirResult;
+import pt.up.fe.comp2025.optimization.optimi.AstOptimizerVisitor;
+import pt.up.fe.comp2025.optimization.optimi.OllirOptimizerVisitor;
 
 import java.util.Collections;
 
@@ -50,7 +52,7 @@ public class JmmOptimizationImpl implements JmmOptimization {
 
     @Override
     public OllirResult optimize(OllirResult ollirResult) {
-        return new OllirOptimizer().optimize(ollirResult);
+        return new OllirOptimizerVisitor().optimize(ollirResult);
     }
 
 
