@@ -6,6 +6,7 @@ import pt.up.fe.comp.jmm.analysis.table.Type;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.ast.PreorderJmmVisitor;
 import pt.up.fe.comp2025.ast.TypeUtils;
+import pt.up.fe.comp2025.optimization.OllirGeneratorVisitor;
 
 import java.util.stream.Collectors;
 
@@ -18,6 +19,11 @@ public class OllirExprGeneratorVisitor
         extends PreorderJmmVisitor<Void, OllirExprResult> {
 
     private int labelCounter = 0;
+    private int thenLabelCounter = 0;
+    private int endifLabelCounter = 0;
+    private int while_start_labelCounter = 0;
+    private int while_end_labelCounter = 0;
+
     private static final String SPACE  = " ";
     private static final String ASSIGN = ":=";
     private final String END_STMT     = ";\n";
@@ -25,6 +31,8 @@ public class OllirExprGeneratorVisitor
     private final SymbolTable table;
     private final TypeUtils  types;
     private final OptUtils   ollirTypes;
+
+
 
     public OllirExprGeneratorVisitor(SymbolTable table) {
         this.table      = table;
@@ -50,22 +58,18 @@ public class OllirExprGeneratorVisitor
     }
 
     private OllirExprResult visitLiteral(JmmNode node, Void unused) {
+        System.out.println("==== DEBUG visitLiteral ====");
+        System.out.println("Literal value: " + node.get("value"));
+        System.out.println("Literal type: " + types.getExprType(node));
         // Get type
         Type t = types.getExprType(node);
         String ollirType = ollirTypes.toOllirType(t);
         String value = node.get("value");
 
-        // If it's boolean, we must assign it to a temp
-        System.out.println(t.getName());
+        // Convert boolean true/false to 1/0
         if (t.getName().equals("boolean")) {
-            String tmp = ollirTypes.nextTemp() + ollirType;
-            StringBuilder comp = new StringBuilder();
-            comp.append(tmp).append(SPACE)
-                    .append(ASSIGN).append(ollirType).append(SPACE)
-                    .append(value).append(ollirType)
-                    .append(END_STMT);
-
-            return new OllirExprResult(tmp, comp);
+            String boolValue = Boolean.parseBoolean(value) ? "1" : "0";
+            return new OllirExprResult(boolValue + ollirType);
         }
 
         // If it's not boolean (e.g., int, string), it's fine
@@ -82,6 +86,11 @@ public class OllirExprGeneratorVisitor
         System.out.println("==== DEBUG visitVarRef ====");
         System.out.println("ID: " + id);
         System.out.println("Type: " + t.getName() + (t.isArray() ? "[]" : ""));
+
+        // FIRST check if this is an imported class (static reference)
+        if (table.getImports().contains(id)) {
+            return new OllirExprResult(id + ollirType);
+        }
 
         String methodName = getEnclosingMethod(node);
         System.out.println("Enclosing method: " + methodName);
@@ -139,42 +148,50 @@ public class OllirExprGeneratorVisitor
         return null;
     }
 
+    // Inside OllirExprGeneratorVisitor class
     private OllirExprResult visitBinExpr(JmmNode node, Void unused) {
-        var left  = visit(node.getChild(0));
+        System.out.println("==== DEBUG visitBinExpr ====");
+        System.out.println("Operator: " + node.get("op"));
+        System.out.println("Node: " + node.toTree());
+
+        var left = visit(node.getChild(0));
         var right = visit(node.getChild(1));
+        System.out.println("Left computation: " + left.getComputation());
+        System.out.println("Left code: " + left.getCode());
+        System.out.println("Right computation: " + right.getComputation());
+        System.out.println("Right code: " + right.getCode());
 
         StringBuilder comp = new StringBuilder();
         String operator = node.get("op");
 
-        // Handle logical AND (&&)
         if ("&&".equals(operator)) {
-            String tmpVar = ollirTypes.nextTemp() + ollirTypes.toOllirType(types.getExprType(node));
-            String endLabel = "end" + (labelCounter++);
+            System.out.println("==== HANDLING && OPERATOR ====");
+            System.out.println("Left type: " + types.getExprType(node.getChild(0)));
+            System.out.println("Right type: " + types.getExprType(node.getChild(1)));
+            System.out.println("Result type: " + types.getExprType(node));
 
-            // 1) compute left
+            // Use counters to generate unique labels
+            String thenLabel = "then" + getThenLabelCounter();
+            String endifLabel = "endif" + getEndifLabelCounter();
+            String tmpVar = "andTmp" + getThenLabelCounter() + ".bool";
+
+            // Compute left operand
             comp.append(left.getComputation());
 
-            // 2) if left goto endLabel;
-            comp.append("if (")
-                    .append(left.getCode())
-                    .append(") goto ")
-                    .append(endLabel)
-                    .append(";")
-                    .append("\n");
+            // If left is true, jump to then label
+            comp.append("if (").append(left.getCode()).append(") goto ").append(thenLabel).append(";\n");
 
-            // 3) compute right
+            // Left is false - set result to false
+            comp.append(tmpVar).append(" :=.bool 0.bool;\n");
+            comp.append("goto ").append(endifLabel).append(";\n");
+
+            // Left is true - evaluate right operand
+            comp.append(thenLabel).append(":\n\n");
             comp.append(right.getComputation());
+            comp.append(tmpVar).append(" :=.bool ").append(right.getCode()).append(";\n");
 
-            // 4) tmpVar := left &&.boolean right;
-            comp.append(tmpVar).append(SPACE)
-                    .append(ASSIGN).append(ollirTypes.toOllirType(types.getExprType(node))).append(SPACE)
-                    .append(left.getCode()).append(" &&.bool ").append(right.getCode())
-                    .append(END_STMT);
-
-            // 5) emit the label
-            comp.append(endLabel)
-                    .append(":")
-                    .append("\n");
+            // End label
+            comp.append(endifLabel).append(":\n");
 
             return new OllirExprResult(tmpVar, comp);
         }
@@ -248,84 +265,62 @@ public class OllirExprGeneratorVisitor
                 })
                 .collect(Collectors.joining(", "));
 
-        // Return type of the method
         Type retType = types.getExprType(node);
         String retOllir = ollirTypes.toOllirType(retType);
 
-        // If the method returns void, do not store the result in a temporary variable
+        // Determine if this is a static call
+        boolean isStatic = table.getImports().contains(recv.get("name"));
+
         if (retType.getName().equals("void")) {
-            String recvName = recvRes.getCode().replaceAll("^tmp\\d+\\.", "");
-            String methodName = node.get("name");
-
-            boolean isStatic = node.getChildren().stream()
-                    .anyMatch(child -> table.getImports().stream()
-                            .anyMatch(imp -> imp.equals(child.get("name"))));
-
-            System.out.println("OLEEEE" + table.getImports());
-            System.out.println("isStatic: " + isStatic);
-
-            // Ensure we correctly handle static calls with the appropriate class or object
             if (isStatic) {
+                // Static method call - use class name directly
                 comp.append("invokestatic(")
-                        .append(recvName).append(", \"")
-                        .append(methodName).append("\"");
+                        .append(recv.get("name")).append(", \"")
+                        .append(node.get("name")).append("\"");
 
                 if (!argsCode.isEmpty()) {
                     comp.append(", ").append(argsCode);
                 }
 
-                comp.append(").V");  // Append .V for void return type
+                comp.append(").V");
+                return new OllirExprResult("", comp);
             } else {
+                // Instance method call
                 comp.append("invokevirtual(")
-                        .append(recvName).append(", \"")
-                        .append(methodName).append("\"");
+                        .append(recvRes.getCode()).append(", \"")
+                        .append(node.get("name")).append("\"");
 
                 if (!argsCode.isEmpty()) {
                     comp.append(", ").append(argsCode);
                 }
 
-                comp.append(").V");  // Append .V for void return type
+                comp.append(").V");
+                return new OllirExprResult("", comp);
             }
-            return new OllirExprResult("", comp);
         }
 
-        // If method returns something other than void, handle the result as usual
+        String receiverName = recv.get("name");
+        // Handle non-void return types (similar logic as above but with temp var)
         String tmp = ollirTypes.nextTemp() + retOllir;
-        String recvName = recvRes.getCode().replace("tmp0.", "");
-        String methodName = node.get("name");
-
-        boolean isStatic = node.getChildren().stream()
-                .filter(child -> !child.getKind().equals("Literal"))
-                .anyMatch(child -> table.getImports().stream()
-                        .anyMatch(imp -> imp.equals(child.get("name"))));
-
-        comp.append(tmp).append(SPACE)
-                .append(ASSIGN).append(retOllir).append(SPACE);
-
         if (isStatic) {
-            comp.append("invokestatic(")
-                    .append(recvName).append(", \"")
-                    .append(methodName).append("\"");
-
-            if (!argsCode.isEmpty()) {
-                comp.append(", ").append(argsCode);
-            }
-
-            comp.append(").V");
+            comp.append(tmp).append(SPACE)
+                    .append(ASSIGN).append(retOllir).append(SPACE)
+                    .append("invokestatic(")
+                    .append(receiverName).append(", \"")
+                    .append(node.get("name")).append("\"");
         } else {
-            comp.append("invokevirtual(")
-                    .append(recvName).append(", \"")
-                    .append(methodName).append("\"");
-
-            if (!argsCode.isEmpty()) {
-                comp.append(", ").append(argsCode);
-            }
-
-            comp.append(").V");
+            comp.append(tmp).append(SPACE)
+                    .append(ASSIGN).append(retOllir).append(SPACE)
+                    .append("invokevirtual(")
+                    .append(recvRes.getCode()).append(", \"")
+                    .append(node.get("name")).append("\"");
         }
 
-        comp.append(retOllir).append(END_STMT);
+        if (!argsCode.isEmpty()) {
+            comp.append(", ").append(argsCode);
+        }
 
+        comp.append(")").append(retOllir).append(END_STMT);
         return new OllirExprResult(tmp, comp);
     }
 
@@ -391,4 +386,21 @@ public class OllirExprGeneratorVisitor
 
         return new OllirExprResult(tmp, comp);
     }
+
+    public int getThenLabelCounter(){
+        return thenLabelCounter++;
+    }
+
+    public int getEndifLabelCounter(){
+        return endifLabelCounter++;
+    }
+
+    public int getWhile_start_labelCounter(){
+        return while_start_labelCounter++;
+    }
+
+    public int getWhile_end_labelCounter(){
+        return while_end_labelCounter++;
+    }
+
 }
