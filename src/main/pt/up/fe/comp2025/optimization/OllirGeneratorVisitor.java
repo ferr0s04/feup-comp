@@ -17,13 +17,6 @@ import static pt.up.fe.comp2025.ast.Kind.*;
  */
 public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
 
-    private int thenLabelCounter = 0;
-    private int endifLabelCounter = 0;
-    private int while_start_labelCounter = 0;
-    private int while_end_labelCounter = 0;
-
-
-
     private static final String SPACE     = " ";
     private static final String ASSIGN    = ":=";
     private final        String END_STMT  = ";\n";
@@ -37,12 +30,16 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
     private final OllirExprGeneratorVisitor exprVisitor;
 
     public OllirGeneratorVisitor(SymbolTable table) {
+        System.out.println("==== INITIALIZING OLLIR GENERATOR ====");
+        System.out.println("Symbol table imports: " + table.getImports());
+        System.out.println("Symbol table fields: " + table.getFields());
         this.table       = table;
         this.types       = new TypeUtils(table);
         this.ollirTypes  = new OptUtils(types);
         this.exprVisitor = new OllirExprGeneratorVisitor(table);
         buildVisitor();
     }
+
 
     @Override
     protected void buildVisitor() {
@@ -62,6 +59,7 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         addVisit(STMT,          this::visitStmt);
         addVisit(IMPORT_DECL,   this::visitImportDecl);
         addVisit(ARRAY_ASSIGN_STMT, this::visitAssignStmt);
+        addVisit(LITERAL,      this::visitLiteral);
         // fallback for ExprStmt, IfStmt, WhileStmt...
     }
 
@@ -110,6 +108,10 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
     }
 
     private String visitMethodDecl(JmmNode node, Void unused) {
+        System.out.println("==== DEBUG visitMethodDecl ====");
+        System.out.println("Method name: " + node.get("name"));
+        System.out.println("Is main: " + node.get("isMain"));
+
         var sb = new StringBuilder(".method ");
 
         // Handle 'public' modifier
@@ -154,12 +156,12 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
             sb.append("   ").append(visit(stmt, null));  // 3 spaces indent
         }
 
+        // Add return statement for main method, with specific formatting to match expected output
         if(node.hasAttribute("isMain") && node.get("isMain").equals("true")){
-            sb.append("    ret.V;\n");
+            sb.append("\nret.V;}");
+        } else {
+            sb.append(R_BRACKET).append(NL);  // Normal formatting for other methods
         }
-
-        sb.append(R_BRACKET).append(NL);  // Use constant for "}\n"
-
 
         return sb.toString();
     }
@@ -186,6 +188,9 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
     }
 
     private String visitAssignStmt(JmmNode node, Void unused) {
+        System.out.println("==== DEBUG visitAssignStmt ====");
+        System.out.println("Assignment target: " + node.get("name"));
+        System.out.println("Assignment type: " + types.getExprType(node.getChild(0)));
         var rhs = exprVisitor.visit(node.getChild(0));  // Right-hand side expression
         var lhs = node.get("name");  // Left-hand side variable or array
         Type t = types.getExprType(node.getChild(0));  // Type of the right-hand side expression
@@ -318,47 +323,62 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
     }
 
     private String visitIfStmt(JmmNode node, Void unused) {
-        // [ condExpr, thenStmt, (elseStmt)? ]
-        var cond   = exprVisitor.visit(node.getChild(0));
-        StringBuilder sb = new StringBuilder();
-        String thenLabel = "then"  + (thenLabelCounter++);
-        String endLabel  = "endif" + (endifLabelCounter++);
+        System.out.println("==== DEBUG visitIfStmt ====");
+        System.out.println("If statement node: " + node.toTree());
+        System.out.println("Number of children: " + node.getNumChildren());
 
-        // 1) compute condition
+        // Access the condition and both branches
+        var cond = exprVisitor.visit(node.getChild(0));
+        StringBuilder sb = new StringBuilder();
+
+        // Use separate counters for then and endif labels
+        String thenLabel = "then" + getThenLabelCounter();
+        String endifLabel = "endif" + getEndifLabelCounter();
+
+
+        // 1) Add condition computation
         sb.append(cond.getComputation());
-        // 2) if cond goto elseLabel;
+
+        // 2) Check condition and goto thenLabel if true
         sb.append("if (")
                 .append(cond.getCode())
                 .append(") goto ")
                 .append(thenLabel)
                 .append(";")
                 .append("\n");
-        // 3) then-block
-        sb.append(visit(node.getChild(1), null));
-        // 4) jump past the else
-        sb.append("goto ")
-                .append(endLabel)
-                .append(";")
-                .append("\n");
-        // 5) elseLabel:
-        sb.append(thenLabel).append(":").append("\n");
-        System.out.println("qqqqqqqqqq " + node.getNumChildren());
-        /*if (node.getNumChildren() == 3) {
-            sb.append(visit(node.getChild(2), null));
-        }*/
-        if (node.getNumChildren() > 2) {
-            for (int a = 2; a < node.getNumChildren(); a++) {
-                System.out.println("caranguejo: " + node.getChild(a).getChildren());
-                if(node.getChild(a).getKind().equals("BlockStmt")) {
-                    for (int i = 0; i < node.getChild(a).getNumChildren(); i++) {
-                        sb.append(visit(node.getChild(a).getChild(i), null));
-                    }
-                }
-                //sb.append(visit(visitIfStmt(node.getChild(a).getChildren(), null), null));
+
+        // 3) Handle the "else" branch first (node.getChild(2))
+        if (node.getNumChildren() > 2 && node.getChild(2).getKind().equals("BlockStmt")) {
+            for (int i = 0; i < node.getChild(2).getNumChildren(); i++) {
+                sb.append(visit(node.getChild(2).getChild(i), null));
             }
         }
-        // 6) endLabel:
-        sb.append(endLabel).append(":").append("\n");
+
+        // 4) Add goto to skip over "then" branch
+        sb.append("goto ")
+                .append(endifLabel)
+                .append(";")
+                .append("\n");
+
+        // 5) Add the "then" label
+        sb.append(thenLabel)
+                .append(":")
+                .append("\n");
+
+        // 6) Handle the "then" branch (node.getChild(1))
+        if (node.getChild(1).getKind().equals("BlockStmt")) {
+            for (int i = 0; i < node.getChild(1).getNumChildren(); i++) {
+                sb.append(visit(node.getChild(1).getChild(i), null));
+            }
+        } else {
+            sb.append(visit(node.getChild(1), null));
+        }
+
+        // 7) Add the endif label
+        sb.append(endifLabel)
+                .append(":")
+                .append("\n");
+
         return sb.toString();
     }
 
@@ -373,8 +393,8 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         var body = node.getChild(1);  // Body of the while loop
 
         // Generate unique labels for start and end of the loop
-        String startLabel = "while_start_" + (while_start_labelCounter++);
-        String endLabel = "while_end_" + (while_end_labelCounter++);
+        String startLabel = "while" + (getWhile_start_labelCounter());
+        String endLabel = "endif" + (getWhile_end_labelCounter());
 
         StringBuilder sb = new StringBuilder();
 
@@ -397,10 +417,31 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         return "import " + importName + ";\n";
     }
 
+    private String visitLiteral(JmmNode node, Void unused) {
+        // Retorna o valor do literal com o sufixo apropriado
+        return node.get("value") + ".i32";
+    }
+
 
     private String buildConstructor() {
         return "    .construct %s().V {\n".formatted(table.getClassName()) +
                 "        invokespecial(this, \"<init>\").V;\n" +
                 "    }\n";
+    }
+
+    public int getThenLabelCounter() {
+        return exprVisitor.getThenLabelCounter();
+    }
+
+    public int getEndifLabelCounter() {
+        return exprVisitor.getEndifLabelCounter();
+    }
+
+    public int getWhile_start_labelCounter() {
+        return exprVisitor.getWhile_start_labelCounter();
+    }
+
+    public int getWhile_end_labelCounter() {
+        return exprVisitor.getWhile_end_labelCounter();
     }
 }

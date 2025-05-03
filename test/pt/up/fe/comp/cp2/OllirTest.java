@@ -175,13 +175,20 @@ public class OllirTest {
     public void basicClass() {
         var result = getOllirResult("basic/BasicClass.jmm");
 
+        System.out.println("///////////////");
+        System.out.println("basicClass");
+        System.out.println(result.getOllirCode());
+        System.out.println("///////////////");
+
         compileBasic(result.getOllirClass());
     }
 
     @Test
     public void basicClassWithFields() {
         var result = getOllirResult("basic/BasicClassWithFields.jmm");
+
         System.out.println("///////////////");
+        System.out.println("basicClassWithFields");
         System.out.println(result.getOllirCode());
         System.out.println("///////////////");
 
@@ -191,7 +198,9 @@ public class OllirTest {
     @Test
     public void basicAssignment() {
         var result = getOllirResult("basic/BasicAssignment.jmm");
+
         System.out.println("///////////////");
+        System.out.println("basicAssignment");
         System.out.println(result.getOllirCode());
         System.out.println("///////////////");
 
@@ -203,6 +212,7 @@ public class OllirTest {
         var result = getOllirResult("basic/BasicMethodInvocation.jmm");
 
         System.out.println("///////////////");
+        System.out.println("basicMethodInvocation");
         System.out.println(result.getOllirCode());
         System.out.println("///////////////");
 
@@ -215,6 +225,11 @@ public class OllirTest {
     public void basicMethodDeclarationArray() {
         var result = getOllirResult("basic/BasicMethodsArray.jmm");
 
+        System.out.println("///////////////");
+        System.out.println("basicMethodDeclarationArray");
+        System.out.println(result.getOllirCode());
+        System.out.println("///////////////");
+
         var method = CpUtils.getMethod(result, "func4");
 
         CpUtils.assertEquals("Method return type", "int[]", CpUtils.toString(method.getReturnType()), result);
@@ -224,6 +239,11 @@ public class OllirTest {
     public void arithmeticSimpleAdd() {
         var ollirResult = getOllirResult("arithmetic/Arithmetic_add.jmm");
 
+        System.out.println("///////////////");
+        System.out.println("arithmeticSimpleAdd");
+        System.out.println(ollirResult.getOllirCode());
+        System.out.println("///////////////");
+
 
         compileArithmetic(ollirResult.getOllirClass());
     }
@@ -231,6 +251,12 @@ public class OllirTest {
     @Test
     public void arithmeticSimpleAnd() {
         var ollirResult = getOllirResult("arithmetic/Arithmetic_and.jmm");
+
+        System.out.println("///////////////");
+        System.out.println("arithmeticSimpleAnd");
+        System.out.println(ollirResult.getOllirCode());
+        System.out.println("///////////////");
+
         var method = CpUtils.getMethod(ollirResult, "main");
         var numBranches = CpUtils.getInstructions(CondBranchInstruction.class, method).size();
 
@@ -240,6 +266,11 @@ public class OllirTest {
     @Test
     public void arithmeticSimpleLess() {
         var ollirResult = getOllirResult("arithmetic/Arithmetic_less.jmm");
+
+        System.out.println("///////////////");
+        System.out.println("arithmeticSimpleLess");
+        System.out.println(ollirResult.getOllirCode());
+        System.out.println("///////////////");
 
         var method = CpUtils.getMethod(ollirResult, "main");
 
@@ -251,6 +282,11 @@ public class OllirTest {
     public void controlFlowIfSimpleSingleGoTo() {
 
         var result = getOllirResult("control_flow/SimpleIfElseStat.jmm");
+
+        System.out.println("///////////////");
+        System.out.println("controlFlowIfSimpleSingleGoTo");
+        System.out.println(result.getOllirCode());
+        System.out.println("///////////////");
 
         var method = CpUtils.getMethod(result, "func");
 
@@ -266,6 +302,11 @@ public class OllirTest {
 
         var result = getOllirResult("control_flow/SwitchStat.jmm");
 
+        System.out.println("///////////////");
+        System.out.println("controlFlowIfSwitch");
+        System.out.println(result.getOllirCode());
+        System.out.println("///////////////");
+
         var method = CpUtils.getMethod(result, "func");
 
         var branches = CpUtils.assertInstExists(CondBranchInstruction.class, method, result);
@@ -280,6 +321,11 @@ public class OllirTest {
 
         var result = getOllirResult("control_flow/SimpleWhileStat.jmm");
 
+        System.out.println("///////////////");
+        System.out.println("controlFlowWhileSimple");
+        System.out.println(result.getOllirCode());
+        System.out.println("///////////////");
+
         var method = CpUtils.getMethod(result, "func");
 
         var branches = CpUtils.assertInstExists(CondBranchInstruction.class, method, result);
@@ -292,6 +338,11 @@ public class OllirTest {
     @Test
     public void arraysInitArray() {
         var result = getOllirResult("arrays/ArrayInit.jmm");
+
+        System.out.println("///////////////");
+        System.out.println("arraysInitArray");
+        System.out.println(result.getOllirCode());
+        System.out.println("///////////////");
 
         var method = CpUtils.getMethod(result, "main");
 
@@ -318,6 +369,7 @@ public class OllirTest {
         var result = getOllirResult("arrays/ArrayAccess.jmm");
 
         System.out.println("///////////////");
+        System.out.println("arraysAccessArray");
         System.out.println(result.getOllirCode());
         System.out.println("///////////////");
 
@@ -340,6 +392,7 @@ public class OllirTest {
         var result = getOllirResult("arrays/ComplexArrayAccess.jmm");
 
         System.out.println("---------------------- OLLIR ----------------------");
+        System.out.println("arraysLoadComplexArrayAccess");
         System.out.println(result.getOllirCode());
         System.out.println("---------------------- OLLIR ----------------------");
 

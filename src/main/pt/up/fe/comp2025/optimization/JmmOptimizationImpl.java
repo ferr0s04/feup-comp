@@ -3,6 +3,8 @@ package pt.up.fe.comp2025.optimization;
 import pt.up.fe.comp.jmm.analysis.JmmSemanticsResult;
 import pt.up.fe.comp.jmm.ollir.JmmOptimization;
 import pt.up.fe.comp.jmm.ollir.OllirResult;
+import pt.up.fe.comp2025.optimization.optimi.AstOptimizerVisitor;
+import pt.up.fe.comp2025.optimization.optimi.OllirOptimizerVisitor;
 
 import java.util.Collections;
 
@@ -24,19 +26,37 @@ public class JmmOptimizationImpl implements JmmOptimization {
 
     @Override
     public JmmSemanticsResult optimize(JmmSemanticsResult semanticsResult) {
+        // Check if optimization is enabled
+        var optimizeFlag = semanticsResult.getConfig()
+                .getOrDefault("optimize", "false")
+                .equals("true");
 
-        //TODO: Do your AST-based optimizations here
+        if (!optimizeFlag) {
+            return semanticsResult;
+        }
 
-        return semanticsResult;
+        // Apply AST-level optimizations in-place
+        var optimizer = new AstOptimizerVisitor();
+        optimizer.visit(semanticsResult.getRootNode());
+
+        // Return the updated semantics result (AST is modified in-place)
+        return new JmmSemanticsResult(
+                semanticsResult.getRootNode(),
+                semanticsResult.getSymbolTable(),
+                semanticsResult.getReports(),
+                semanticsResult.getConfig()
+        );
     }
+
+
 
     @Override
     public OllirResult optimize(OllirResult ollirResult) {
-
-        //TODO: Do your OLLIR-based optimizations here
-
-        return ollirResult;
+        return new OllirOptimizerVisitor().optimize(ollirResult);
     }
+
+
+
 
 
 }
