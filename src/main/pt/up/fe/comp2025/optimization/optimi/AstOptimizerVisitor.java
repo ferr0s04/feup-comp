@@ -109,44 +109,20 @@ public class AstOptimizerVisitor extends AJmmVisitor<Void, Void> {
     private Void visitWhileStmt(JmmNode node, Void unused) {
         // Otimiza a condição do loop
         JmmNode condition = node.getChild(0);
+        JmmNode body = node.getChild(1);
+
+        visit(body);
         visit(condition);
 
-        if (condition.getKind().equals("BinaryOp")) {
-            JmmNode left = condition.getChild(0);
-            JmmNode right = condition.getChild(1);
-
-            // Substitui variáveis por constantes, se aplicável
-            if (left.getKind().equals("Identifier") && constantTable.containsKey(left.get("name"))) {
-                left.put("value", constantTable.get(left.get("name")));
-                left.put("kind", "Literal");
-            }
-            if (right.getKind().equals("Identifier") && constantTable.containsKey(right.get("name"))) {
-                right.put("value", constantTable.get(right.get("name")));
-                right.put("kind", "Literal");
-            }
-
-            // Simplifica a condição se ambos os lados forem literais
-            if (left.getKind().equals("Literal") && right.getKind().equals("Literal")) {
-                int leftVal = Integer.parseInt(left.get("value"));
-                int rightVal = Integer.parseInt(right.get("value"));
-                boolean result = switch (condition.get("op")) {
-                    case "<" -> leftVal < rightVal;
-                    case ">" -> leftVal > rightVal;
-                    case "<=" -> leftVal <= rightVal;
-                    case ">=" -> leftVal >= rightVal;
-                    case "==" -> leftVal == rightVal;
-                    case "!=" -> leftVal != rightVal;
-                    default -> throw new IllegalArgumentException("Operador desconhecido: " + condition.get("op"));
-                };
-
-                condition.put("kind", "Literal");
-                condition.put("value", result ? "1" : "0");
+        // Remove do constantTable qualquer variável que é modificada no loop
+        if (body.getKind().equals("BlockStmt")) {
+            for (JmmNode stmt : body.getChildren()) {
+                if (stmt.getKind().equals("AssignStmt")) {
+                    String varName = stmt.get("name");
+                    constantTable.remove(varName);
+                }
             }
         }
-
-        // Otimiza o corpo do loop
-        JmmNode body = node.getChild(1);
-        visit(body);
 
         return null;
     }

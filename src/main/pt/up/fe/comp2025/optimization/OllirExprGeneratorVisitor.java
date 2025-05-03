@@ -47,8 +47,6 @@ public class OllirExprGeneratorVisitor
         addVisit(IDENTIFIER, this::visitVarRef);
         addVisit(LITERAL,    this::visitLiteral);
         addVisit(BINARY_OP,  this::visitBinExpr);
-
-        // new ones:
         addVisit(NEW_OBJECT,     this::visitNewObject);
         addVisit(NEW_ARRAY,      this::visitNewArray);
         addVisit(METHOD_CALL,    this::visitMethodCall);
@@ -58,9 +56,6 @@ public class OllirExprGeneratorVisitor
     }
 
     private OllirExprResult visitLiteral(JmmNode node, Void unused) {
-        System.out.println("==== DEBUG visitLiteral ====");
-        System.out.println("Literal value: " + node.get("value"));
-        System.out.println("Literal type: " + types.getExprType(node));
         // Get type
         Type t = types.getExprType(node);
         String ollirType = ollirTypes.toOllirType(t);
@@ -81,11 +76,6 @@ public class OllirExprGeneratorVisitor
         String id = node.get("name");
         Type t = types.getExprType(node);
         String ollirType = ollirTypes.toOllirType(t);
-
-        // DEBUG
-        System.out.println("==== DEBUG visitVarRef ====");
-        System.out.println("ID: " + id);
-        System.out.println("Type: " + t.getName() + (t.isArray() ? "[]" : ""));
 
         // FIRST check if this is an imported class (static reference)
         if (table.getImports().contains(id)) {
@@ -150,25 +140,14 @@ public class OllirExprGeneratorVisitor
 
     // Inside OllirExprGeneratorVisitor class
     private OllirExprResult visitBinExpr(JmmNode node, Void unused) {
-        System.out.println("==== DEBUG visitBinExpr ====");
-        System.out.println("Operator: " + node.get("op"));
-        System.out.println("Node: " + node.toTree());
 
         var left = visit(node.getChild(0));
         var right = visit(node.getChild(1));
-        System.out.println("Left computation: " + left.getComputation());
-        System.out.println("Left code: " + left.getCode());
-        System.out.println("Right computation: " + right.getComputation());
-        System.out.println("Right code: " + right.getCode());
 
         StringBuilder comp = new StringBuilder();
         String operator = node.get("op");
 
         if ("&&".equals(operator)) {
-            System.out.println("==== HANDLING && OPERATOR ====");
-            System.out.println("Left type: " + types.getExprType(node.getChild(0)));
-            System.out.println("Right type: " + types.getExprType(node.getChild(1)));
-            System.out.println("Result type: " + types.getExprType(node));
 
             // Use counters to generate unique labels
             String thenLabel = "then" + getThenLabelCounter();

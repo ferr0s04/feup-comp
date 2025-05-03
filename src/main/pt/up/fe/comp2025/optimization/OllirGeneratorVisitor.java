@@ -393,8 +393,8 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         var body = node.getChild(1);  // Body of the while loop
 
         // Generate unique labels for start and end of the loop
-        String startLabel = "while_start_" + (getWhile_start_labelCounter());
-        String endLabel = "while_end_" + (getWhile_end_labelCounter());
+        String startLabel = "while" + (getWhile_start_labelCounter());
+        String endLabel = "endif" + (getWhile_end_labelCounter());
 
         StringBuilder sb = new StringBuilder();
 

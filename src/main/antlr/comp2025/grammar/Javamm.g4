@@ -80,7 +80,7 @@ stmt
     : expr ';'                        # ExprStmt
     | 'return' expr? ';'              # ReturnStmt
     | '{' (stmt)* '}'                 # BlockStmt
-    | IF '(' expr ')' stmt (ELSEIF '(' expr ')' stmt )* (ELSE stmt)?  # IfStmt
+    | IF '(' expr ')' stmt ELSE stmt  # IfStmt
     | FOR '(' stmt expr ';' expr ')' stmt  # ForStmt
     | WHILE '(' expr ')' stmt         # WhileStmt
     | name=ID '=' expr ';'            # AssignStmt

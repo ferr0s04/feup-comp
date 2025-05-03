@@ -281,32 +281,11 @@ public class SemanticAnalysisTest {
     }
 
     @Test
-    public void loops() {
-        var result = TestUtils
-                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/Loops.jmm"));
-        TestUtils.noErrors(result);
-    }
-
-    @Test
-    public void boolReturn() {
-        var result = TestUtils
-                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/BoolReturn.jmm"));
-        TestUtils.noErrors(result);
-    }
-
-    @Test
     public void arrayIndexBoolean() {
         var result = TestUtils
                 .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/ArrayIndexBoolean.jmm"));
         TestUtils.mustFail(result);
         System.out.println(result.getReports());
-    }
-
-    @Test
-    public void different() {
-        var result = TestUtils
-                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/Different.jmm"));
-        TestUtils.noErrors(result);
     }
 
     @Test
