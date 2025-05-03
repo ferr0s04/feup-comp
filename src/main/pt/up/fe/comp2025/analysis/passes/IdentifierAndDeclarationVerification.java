@@ -59,8 +59,6 @@ public class IdentifierAndDeclarationVerification extends AnalysisVisitor {
      * Checks if a variable is declared in the method's parameters, local variables, or fields.
      */
     private boolean isDeclared(String varName, SymbolTable table) {
-        System.out.println(table.getImports());
-        System.out.println(varName);
         return table.getParameters(currentMethod).stream().anyMatch(param -> param.getName().equals(varName)) ||
                 table.getLocalVariables(currentMethod).stream().anyMatch(var -> var.getName().equals(varName)) ||
                 table.getFields().stream().anyMatch(field -> field.getName().equals(varName)) ||

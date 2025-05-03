@@ -307,12 +307,6 @@ public class TypeUtils {
         // Get the type of the array expression
         Type arrayExprType = getExprType(arrayNode.getChild(0));
 
-        System.out.println("arrayNode " + arrayNode);
-        System.out.println("arrayExprType " + arrayExprType);
-        System.out.println("isVarargs(arrayExprType) " + isVarargs(arrayExprType));
-        System.out.println("arrayExprType.isArray " + arrayExprType.isArray());
-
-
         // Check if the expression is an array or varargs
         if (!arrayExprType.isArray() && !isVarargs(arrayExprType)) {
             throw new IllegalArgumentException("Attempted indexing on a non-array or non-varargs type: " + arrayExprType);
@@ -376,8 +370,6 @@ public class TypeUtils {
 
         // Type check: Ensure the assigned expression type matches the variable type
         if (!varType.equals(exprType)) {
-            System.out.println("varType" + varType);
-            System.out.println("exprType" + exprType);
             throw new IllegalArgumentException(
                     "Type mismatch: Cannot assign " + exprType.getName() + " to " + varType.getName()
             );

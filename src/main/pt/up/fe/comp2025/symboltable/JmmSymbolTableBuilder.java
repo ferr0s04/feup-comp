@@ -78,11 +78,6 @@ public class JmmSymbolTableBuilder {
             processMethod(methodDecl);
         }
 
-        // In JmmSymbolTableBuilder.build():
-        System.out.println("Class declaration attributes: " + classDecl.getAttributes());
-        System.out.println("Building symbol table for class: " + className +
-                " extends " + superClass);  // Debug output
-
         return new JmmSymbolTable(className, superClass, imports, methods, returnTypes, parameters, localVariables, fields);
     }
 
@@ -128,7 +123,7 @@ public class JmmSymbolTableBuilder {
             parameters.put(methodName, paramList);
             localVariables.put(methodName, allVars);
         } else {
-            System.out.println("No method name found in node: " + methodNode);
+
         }
     }
 

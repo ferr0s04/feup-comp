@@ -18,7 +18,6 @@ import static pt.up.fe.comp2025.ast.Kind.*;
 public class OllirExprGeneratorVisitor
         extends PreorderJmmVisitor<Void, OllirExprResult> {
 
-    private int labelCounter = 0;
     private int thenLabelCounter = 0;
     private int endifLabelCounter = 0;
     private int while_start_labelCounter = 0;
@@ -83,10 +82,8 @@ public class OllirExprGeneratorVisitor
         }
 
         String methodName = getEnclosingMethod(node);
-        System.out.println("Enclosing method: " + methodName);
 
         if (methodName != null) {
-            // Verificar se é um parâmetro ou variável local do método atual
             boolean isLocalOrParam = false;
 
             // Verificar nos parâmetros
@@ -122,11 +119,9 @@ public class OllirExprGeneratorVisitor
             }
         }
 
-        // Variável local ou parâmetro - apenas retornar o nome com tipo
         return new OllirExprResult(id + ollirType);
     }
 
-    // Método auxiliar para obter o nome do método que contém o nó atual
     private String getEnclosingMethod(JmmNode node) {
         JmmNode current = node;
         while (current != null) {
@@ -138,7 +133,6 @@ public class OllirExprGeneratorVisitor
         return null;
     }
 
-    // Inside OllirExprGeneratorVisitor class
     private OllirExprResult visitBinExpr(JmmNode node, Void unused) {
 
         var left = visit(node.getChild(0));
@@ -175,7 +169,6 @@ public class OllirExprGeneratorVisitor
             return new OllirExprResult(tmpVar, comp);
         }
 
-        // Fallback for other binary ops
         comp.append(left.getComputation());
         comp.append(right.getComputation());
 
@@ -195,7 +188,6 @@ public class OllirExprGeneratorVisitor
 
 
     private OllirExprResult visitNewObject(JmmNode node, Void unused) {
-        // new ClassName()
         String className = node.get("name");
         Type t = new Type(className, false);
         String ollirT  = ollirTypes.toOllirType(t);
@@ -211,7 +203,6 @@ public class OllirExprGeneratorVisitor
     }
 
     private OllirExprResult visitNewArray(JmmNode node, Void unused) {
-        // new int[expr]
         var lenRes = visit(node.getChild(0));
 
         Type   t        = new Type("int", true);

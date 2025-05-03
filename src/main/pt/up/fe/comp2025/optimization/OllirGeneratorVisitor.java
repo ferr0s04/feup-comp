@@ -30,9 +30,6 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
     private final OllirExprGeneratorVisitor exprVisitor;
 
     public OllirGeneratorVisitor(SymbolTable table) {
-        System.out.println("==== INITIALIZING OLLIR GENERATOR ====");
-        System.out.println("Symbol table imports: " + table.getImports());
-        System.out.println("Symbol table fields: " + table.getFields());
         this.table       = table;
         this.types       = new TypeUtils(table);
         this.ollirTypes  = new OptUtils(types);
@@ -108,10 +105,6 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
     }
 
     private String visitMethodDecl(JmmNode node, Void unused) {
-        System.out.println("==== DEBUG visitMethodDecl ====");
-        System.out.println("Method name: " + node.get("name"));
-        System.out.println("Is main: " + node.get("isMain"));
-
         var sb = new StringBuilder(".method ");
 
         // Handle 'public' modifier
@@ -167,10 +160,6 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
     }
 
     private String visitParam(JmmNode node, Void unused) {
-        System.out.println("aaaa: "+ node.toString());
-        System.out.println("bbbb: "+ node.getChild(0));
-        System.out.println("aaaa2: "+ unused);
-        // name:type
         return node.get("name") +
                 ollirTypes.toOllirType(types.convertType(node.getChild(0)));
     }
@@ -188,9 +177,6 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
     }
 
     private String visitAssignStmt(JmmNode node, Void unused) {
-        System.out.println("==== DEBUG visitAssignStmt ====");
-        System.out.println("Assignment target: " + node.get("name"));
-        System.out.println("Assignment type: " + types.getExprType(node.getChild(0)));
         var rhs = exprVisitor.visit(node.getChild(0));  // Right-hand side expression
         var lhs = node.get("name");  // Left-hand side variable or array
         Type t = types.getExprType(node.getChild(0));  // Type of the right-hand side expression
@@ -253,7 +239,6 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
                 " :=" + ollirT + " " + value + ollirT + END_STMT;
     }
 
-    // Método auxiliar para obter o nome do método que contém o nó atual
     private String getEnclosingMethod(JmmNode node) {
         JmmNode current = node;
         while (current != null) {
@@ -323,10 +308,6 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
     }
 
     private String visitIfStmt(JmmNode node, Void unused) {
-        System.out.println("==== DEBUG visitIfStmt ====");
-        System.out.println("If statement node: " + node.toTree());
-        System.out.println("Number of children: " + node.getNumChildren());
-
         // Access the condition and both branches
         var cond = exprVisitor.visit(node.getChild(0));
         StringBuilder sb = new StringBuilder();
@@ -334,7 +315,6 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         // Use separate counters for then and endif labels
         String thenLabel = "then" + getThenLabelCounter();
         String endifLabel = "endif" + getEndifLabelCounter();
-
 
         // 1) Add condition computation
         sb.append(cond.getComputation());
@@ -411,17 +391,13 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
 
 
     private String visitImportDecl(JmmNode node, Void unused) {
-        //System.out.println("Import node attributes: " + node.getAttributes());
-        //System.out.println("Import node children: " + node.getChildren());
         String importName = node.get("name").replace(";", "").replaceAll("[\\[\\]]", "");
         return "import " + importName + ";\n";
     }
 
     private String visitLiteral(JmmNode node, Void unused) {
-        // Retorna o valor do literal com o sufixo apropriado
         return node.get("value") + ".i32";
     }
-
 
     private String buildConstructor() {
         return "    .construct %s().V {\n".formatted(table.getClassName()) +
