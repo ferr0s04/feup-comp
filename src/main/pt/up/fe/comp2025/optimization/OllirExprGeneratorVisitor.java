@@ -134,56 +134,64 @@ public class OllirExprGeneratorVisitor
     }
 
     private OllirExprResult visitBinExpr(JmmNode node, Void unused) {
-
-        var left = visit(node.getChild(0));
-        var right = visit(node.getChild(1));
-
-        StringBuilder comp = new StringBuilder();
-        String operator = node.get("op");
-
-        if ("&&".equals(operator)) {
-
-            // Use counters to generate unique labels
-            String thenLabel = "then" + getThenLabelCounter();
-            String endifLabel = "endif" + getEndifLabelCounter();
-            String tmpVar = "andTmp" + getThenLabelCounter() + ".bool";
-
-            // Compute left operand
-            comp.append(left.getComputation());
-
-            // If left is true, jump to then label
-            comp.append("if (").append(left.getCode()).append(") goto ").append(thenLabel).append(";\n");
-
-            // Left is false - set result to false
-            comp.append(tmpVar).append(" :=.bool 0.bool;\n");
-            comp.append("goto ").append(endifLabel).append(";\n");
-
-            // Left is true - evaluate right operand
-            comp.append(thenLabel).append(":\n\n");
-            comp.append(right.getComputation());
-            comp.append(tmpVar).append(" :=.bool ").append(right.getCode()).append(";\n");
-
-            // End label
-            comp.append(endifLabel).append(":\n");
-
-            return new OllirExprResult(tmpVar, comp);
+        if (node.getNumChildren() != 2) {
+            throw new IllegalArgumentException("Binary expression must have exactly 2 children");
         }
 
-        comp.append(left.getComputation());
-        comp.append(right.getComputation());
+        OllirExprResult left = visit(node.getChild(0));
+        OllirExprResult right = visit(node.getChild(1));
+        String operator = node.get("op");
+
+        if (operator == null) {
+            throw new IllegalArgumentException("Binary operator missing");
+        }
+
+        StringBuilder comp = new StringBuilder();
+
+        // Handle short-circuiting logical operators
+        if ("&&".equals(operator) || "||".equals(operator)) {
+            return handleLogicalOperator(node, left, right, operator, comp);
+        }
+
+        // Handle regular binary operators
+        comp.append(left.getComputation())
+                .append(right.getComputation());
 
         Type resType = types.getExprType(node);
         String resOllir = ollirTypes.toOllirType(resType);
         String resultTemp = ollirTypes.nextTemp() + resOllir;
 
-        comp.append(resultTemp).append(SPACE)
-                .append(ASSIGN).append(resOllir).append(SPACE)
-                .append(left.getCode()).append(SPACE)
-                .append(operator).append(resOllir).append(SPACE)
-                .append(right.getCode())
-                .append(END_STMT);
+        comp.append(String.format("%s %s %s %s %s %s%s",
+                resultTemp, ASSIGN, resOllir,
+                left.getCode(), operator + resOllir,
+                right.getCode(), END_STMT));
 
         return new OllirExprResult(resultTemp, comp);
+    }
+
+    private OllirExprResult handleLogicalOperator(JmmNode node,
+                                                  OllirExprResult left, OllirExprResult right,
+                                                  String operator, StringBuilder comp) {
+
+        String thenLabel = "then" + getThenLabelCounter();
+        String endifLabel = "endif" + getEndifLabelCounter();
+        String tmpVar = "logicalTmp" + getThenLabelCounter() + ".bool";
+
+        comp.append(left.getComputation());
+
+        // For && we jump if true, for || we jump if false
+        String jumpCondition = "&&".equals(operator) ?
+                left.getCode() : "!" + left.getCode();
+
+        comp.append(String.format("if (%s) goto %s;\n", jumpCondition, thenLabel))
+                .append(String.format("%s :=.bool 0.bool;\n", tmpVar))
+                .append(String.format("goto %s;\n", endifLabel))
+                .append(String.format("%s:\n\n", thenLabel))
+                .append(right.getComputation())
+                .append(String.format("%s :=.bool %s;\n", tmpVar, right.getCode()))
+                .append(String.format("%s:\n", endifLabel));
+
+        return new OllirExprResult(tmpVar, comp);
     }
 
 
