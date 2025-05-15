@@ -52,6 +52,11 @@ public class OllirExprGeneratorVisitor
         addVisit(ARRAY_ACCESS,   this::visitArrayAccess);
         addVisit(LENGTH_ACCESS,  this::visitLengthAccess);
         addVisit(UNARY_OP,       this::visitUnaryOp);
+        addVisit(PRIMARY,        this::visitPrimary);
+    }
+
+    private OllirExprResult visitPrimary(JmmNode node, Void unused) {
+        return visit(node.getChild(0));
     }
 
     private OllirExprResult visitLiteral(JmmNode node, Void unused) {
