@@ -147,7 +147,6 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
                                 .anyMatch(imp -> imp.equals(finalAssignedType.getName())
                                         || imp.endsWith("." + finalAssignedType.getName()));
                         if (lhsImported && rhsImported) {
-                            // both sides are imported classes -> accept unconditionally
                             return null;
                         }
                         // otherwise fall back to your normal inheritance check
@@ -158,6 +157,19 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
                         }
                         return null;
                     }
+                    // Limpar - começado na aula, agora sem utilidade, acho...
+                    // TODO: rever
+                    /*if(assignedType.getName().equals("void")) { // get
+                        if(!varType.getName().isEmpty()) {
+                            /*typeUtils.setExprType(valueNode, new Type(varType.getName(), varType.isArray()));
+                            assignedType = typeUtils.getExprType(valueNode);*/
+                            /*System.out.println("NOVO assignedType " + assignedType);
+                            System.out.println("valueNode typeutils: " + typeUtils.getExprType(valueNode));
+                            System.out.println("valueNode2 : " + valueNode);
+                            System.out.println("qwertyui : " + valueNode.getParent());
+                        }
+
+                    }*/
 
                     // Handle primitive type mismatch
                     if (varType.getName().equals("boolean") && assignedType.getName().equals("int")) {

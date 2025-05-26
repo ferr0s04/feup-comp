@@ -54,13 +54,17 @@ public class TypeUtils {
 
 
     public boolean isImported(Type type) {
-        var imports = table.getImports();
-        return imports.contains(type.getName());
+        return isImported(type.getName());
     }
 
     public boolean isImported(String name) {
         var imports = table.getImports();
-        return imports.contains(name);
+        for (var i = 0; i < imports.size(); i++) {
+            var splited = imports.get(i).split("\\.");
+            var last = splited[splited.length - 1];
+            if (last.equals(name)) { return true; }
+        }
+        return false;
     }
 
     public boolean IsClass(Type type) {
@@ -72,9 +76,6 @@ public class TypeUtils {
         var class_a = table.getClassName();
         return typeName.equals(class_a);
     }
-
-
-
 
     /**
      * Converts a JmmNode representing a type into a {@link Type} object.
@@ -159,8 +160,63 @@ public class TypeUtils {
             case METHOD_CALL -> {
                 // Handle method calls
                 String methodName = expr.get("name");
-                Type returnType = lookupMethodReturnType(expr);
-                yield returnType;
+                Type targetType = getExprType(expr.getChild(0)); // The object/class being called on
+
+                if (isImported(targetType)) {
+                    JmmNode parent = expr.getParent();
+                    if (parent != null) {
+                        String parentKind = parent.getKind();
+
+                        if (parentKind.equals("AssignStmt")) {
+                            // Case: a = M.foo(); - assume return type matches variable type
+                            JmmNode variable = parent.getChild(0); // LHS variable
+                            Type variableType = lookupVariableType(variable);
+                            yield variableType;
+
+                        } else if (parentKind.equals("ExprStmt")) {
+                            // Case: M.foo(); - standalone call, assume void return
+                            yield newVoidType();
+
+                        } else if (parentKind.equals("ReturnStmt")) {
+                            // Case: return M.foo(); - assume return type matches method's return type
+                            String currentMethodName = expr.getAncestor(Kind.METHOD_DECL)
+                                    .map(node -> node.get("name"))
+                                    .orElse(null);
+                            if (currentMethodName != null) {
+                                Type methodReturnType = table.getReturnType(currentMethodName);
+                                yield methodReturnType != null ? methodReturnType : newVoidType();
+                            }
+                            yield newVoidType();
+
+                        } else {
+                            // For other contexts (like inside expressions), assume based on usage
+                            // To simple ??? - TODO: rever
+                            Type returnType = lookupMethodReturnType(expr);
+                            yield returnType;
+                        }
+                    } else {
+                        // No parent context, assume void
+                        yield newVoidType();
+                    }
+
+                } else {
+                    // Target is not imported - it's either 'this' or a local class
+                    if (targetType.getName().equals(table.getClassName()) ||
+                            targetType.getName().equals("this")) {
+
+                        // Method call on current class - look up actual method signature
+                        Type returnType = table.getReturnType(methodName);
+                        if (returnType != null) {
+                            yield returnType;
+                        } else {
+                            throw new IllegalArgumentException("Method '" + methodName + "' not found in class");
+                        }
+
+                    } else {
+                        // Method call on some other non-imported type
+                        throw new IllegalArgumentException("Cannot call method on unknown type: " + targetType.getName());
+                    }
+                }
             }
 
             default -> throw new IllegalArgumentException("Unsupported expression type: " + kind);
@@ -280,6 +336,13 @@ public class TypeUtils {
 
         String varName = variableNode.get("name");
 
+        // Verifica se é uma classe importada
+        if (isImported(varName)) {
+            var prov = new Type(varName, false);
+            prov.putObject("isImported", true);
+            return prov;
+        }
+
         String methodName = variableNode.getAncestor(Kind.METHOD_DECL)
                 .map(node -> node.get("name"))
                 .orElse(null);
@@ -290,10 +353,37 @@ public class TypeUtils {
             return type;
         }
 
-        // If not found, check if it's a known class name
-        if (table.getImports().contains(varName) || table.getClassName().equals(varName)) {
-            // Treat class names as object types (non-array)
-            return new Type(varName, false);
+        // Caso o pai seja um AssignStmt, tenta encontrar o VarDecl correspondente
+        if (variableNode.getParent() != null && variableNode.getParent().getKind().equals(Kind.ASSIGN_STMT.getNodeName())) {
+            JmmNode parent = variableNode.getParent();
+            String assignVarName = parent.get("name");
+
+            // Procura o VarDecl correspondente
+            JmmNode varDeclNode = parent.getAncestor(Kind.METHOD_DECL)
+                    .flatMap(method -> method.getChildren(Kind.VAR_DECL).stream()
+                            .filter(varDecl -> varDecl.get("name").equals(assignVarName))
+                            .findFirst())
+                    .orElse(null);
+
+            System.out.println("varDeclNode: " + varDeclNode);
+
+            if (varDeclNode != null) {
+                boolean a = false;
+                if(varDeclNode.getChild(0).get("isArray").equals("true")) {
+                    a = true;
+                }
+
+                return new Type(varDeclNode.getChild(0).get("name"), a);
+            }
+        }
+
+        // Se não encontrado, verifica se é uma classe conhecida
+        boolean imported = isImported(varName);
+        if (imported || table.getClassName().equals(varName)) {
+            Type types = new Type(varName, false);
+            types.putObject("isImported", imported);
+            types.putObject("isStatic", imported);
+            return types;
         }
 
         throw new IllegalArgumentException("Unknown variable or class: " + varName);

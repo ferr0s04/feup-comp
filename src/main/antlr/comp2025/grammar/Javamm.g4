@@ -99,7 +99,7 @@ expr
     | expr '[' expr ']'                             # ArrayAccess
     | expr op=('*' | '/') expr                      # BinaryOp
     | expr op=('+' | '-') expr                      # BinaryOp
-    | expr op=('<' | '>') expr                      #BinaryOp
+    | expr op=('<' | '>') expr                      # BinaryOp
     | expr op=('<=' | '>=' | '==' | '!=' | '+=' | '-=' | '*=' | '/=') expr #BinaryOp
     | expr op='&&' expr                             # BinaryOp
     | expr op='||' expr                             # BinaryOp

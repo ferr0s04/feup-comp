@@ -267,8 +267,11 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
     }
 
     private String visitMethodCallStmt(JmmNode node, Void unused) {
-        // just treat it as an expression plus “;”
         var call = exprVisitor.visit(node);
+
+        if (call.getComputation().endsWith(END_STMT) || call.getCode().endsWith(END_STMT)) {
+            return call.getComputation() + call.getCode();
+        }
         return call.getComputation() + call.getCode() + END_STMT;
     }
 

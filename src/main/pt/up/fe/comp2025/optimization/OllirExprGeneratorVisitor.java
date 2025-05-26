@@ -251,12 +251,25 @@ public class OllirExprGeneratorVisitor
         Type retType = types.getExprType(node);
         String retOllir = ollirTypes.toOllirType(retType);
 
+        // Verifica se o receptor é uma classe importada
+        if (types.isImported(recv.get("name"))) {
+            comp.append("invokestatic(")
+                    .append(recv.get("name")).append(", \"")
+                    .append(node.get("name")).append("\"");
+
+            if (!argsCode.isEmpty()) {
+                comp.append(", ").append(argsCode);
+            }
+
+            comp.append(")").append(retOllir);
+            return new OllirExprResult("", comp);
+        }
+
         // Determine if this is a static call
         boolean isStatic = table.getImports().contains(recv.get("name"));
 
         if (retType.getName().equals("void")) {
             if (isStatic) {
-                // Static method call - use class name directly
                 comp.append("invokestatic(")
                         .append(recv.get("name")).append(", \"")
                         .append(node.get("name")).append("\"");
@@ -268,7 +281,6 @@ public class OllirExprGeneratorVisitor
                 comp.append(").V");
                 return new OllirExprResult("", comp);
             } else {
-                // Instance method call
                 comp.append("invokevirtual(")
                         .append(recvRes.getCode()).append(", \"")
                         .append(node.get("name")).append("\"");
@@ -363,8 +375,7 @@ public class OllirExprGeneratorVisitor
 
         comp.append(tmp).append(SPACE)
                 .append(ASSIGN).append(ollirBool).append(SPACE)
-                .append("inv ").append(exprRes.getCode())
-                .append(ollirBool)
+                .append("! ").append(exprRes.getCode())
                 .append(END_STMT);
 
         return new OllirExprResult(tmp, comp);

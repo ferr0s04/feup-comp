@@ -408,4 +408,15 @@ public class OllirTest {
         CpUtils.assertEquals("Number of array reads", 6, numArrayReads, result);
     }
 
+    @Test
+    public void InvokeVirtual() {
+        var result = getOllirResult("InvokeVirtual.jmm");
+
+        System.out.println("///////////////");
+        System.out.println("InvokeVirtual");
+        System.out.println(result.getOllirCode());
+        System.out.println("///////////////");
+
+    }
+
 }

@@ -27,6 +27,7 @@ public class JmmSymbolTableBuilder {
     private Map<String, List<Symbol>> parameters;
     private Map<String, List<Symbol>> localVariables;
     private List<Symbol> fields;
+    private final TypeUtils typeUtils;
 
     public JmmSymbolTableBuilder() {
         this.reports = new ArrayList<>();
@@ -36,6 +37,7 @@ public class JmmSymbolTableBuilder {
         this.parameters = new HashMap<>();
         this.localVariables = new HashMap<>();
         this.fields = new ArrayList<>();
+        this.typeUtils = new TypeUtils(new JmmSymbolTable(className, superClass, imports, methods, returnTypes, parameters, localVariables, fields));
     }
 
     public List<Report> getReports() {
@@ -134,7 +136,13 @@ public class JmmSymbolTableBuilder {
 
         String typeName = typeNode.get("name");
         boolean isArray = typeNode.hasAttribute("isArray") && typeNode.get("isArray").equals("true");
-        return new Type(typeName, isArray);
+
+        Type type = new Type(typeName, isArray);
+
+        boolean imported = typeUtils.isImported(typeName);
+        type.putObject("isImported", imported);
+        type.putObject("isStatic", imported);
+        return type;
     }
 
     private Symbol extractSymbol(JmmNode node) {

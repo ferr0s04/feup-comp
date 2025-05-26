@@ -1,0 +1,15 @@
+import Cl;
+class InvokeVirtual {
+
+    public static void main(String[] args) {
+
+    }
+
+    public int foo() {
+        int a;
+        Cl c;
+        a = c.get();
+        return a;
+
+    }
+}
