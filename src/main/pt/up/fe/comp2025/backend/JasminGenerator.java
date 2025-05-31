@@ -13,7 +13,9 @@ import pt.up.fe.specs.util.exceptions.NotImplementedException;
 import pt.up.fe.specs.util.utilities.StringLines;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -87,12 +89,50 @@ public class JasminGenerator {
 
         // This way, build is idempotent
         if (code == null) {
+            System.out.println("Ollir code:\n" + ollirResult.getOllirCode());
             code = apply(ollirResult.getOllirClass());
         }
 
         return code;
     }
 
+    private Map<String, Instruction> labelTargets = new HashMap<>();
+    private int labelCounter = 0;
+
+    private void preprocessLabels(Method method) {
+        labelTargets.clear();
+
+        // OLLIR’s Method.getLabels() is a HashMap<String, Instruction>
+        // that was populated earlier via method.addLabel(labelName, instruction).
+        Map<String, Instruction> ollirLabelMap = method.getLabels();
+
+        for (Instruction inst : method.getInstructions()) {
+            if (inst instanceof CondBranchInstruction cond) {
+                String lname = cond.getLabel();
+                Instruction targetInst = ollirLabelMap.get(lname);
+                if (targetInst == null) {
+                    // Should never happen if OLLIR checked labels for you.
+                    throw new RuntimeException("Unknown label “" + lname + "” in CondBranchInstruction.");
+                }
+                labelTargets.put(lname, targetInst);
+
+            } else if (inst instanceof GotoInstruction go) {
+                String lname = go.getLabel();
+                Instruction targetInst = ollirLabelMap.get(lname);
+                if (targetInst == null) {
+                    throw new RuntimeException("Unknown label “" + lname + "” in GotoInstruction.");
+                }
+                labelTargets.put(lname, targetInst);
+            }
+            // For any other instruction type, we do nothing here.
+        }
+    }
+
+    private Instruction getNextInstruction(Method method, int currentIndex) {
+        return currentIndex + 1 < method.getInstructions().size()
+                ? method.getInstructions().get(currentIndex + 1)
+                : null;
+    }
 
     private String generateClassUnit(ClassUnit classUnit) {
         var code = new StringBuilder();
@@ -124,7 +164,7 @@ public class JasminGenerator {
             }
             code.append(apply(method));
         }
-
+        System.out.println("GenerateClassUnit -> Jasmin code:\n" + code);
         return code.toString();
     }
 
@@ -133,62 +173,79 @@ public class JasminGenerator {
         currentMethod = method;
         var code = new StringBuilder();
 
-        // Modifier
+        // First, figure out which instructions are actual branch/goto targets:
+        preprocessLabels(method);
+
+        // ————— Build method header —————
+        // Modifier (e.g. “public static ” or “public ”)
         var modifier = types.getModifier(method.getMethodAccessModifier());
-        modifier += method.isStaticMethod() ? "static " : "";
+        if (method.isStaticMethod()) {
+            modifier += "static ";
+        }
 
         var methodName = method.getMethodName();
 
-        // generate parameter list
+        // Parameter descriptor list, e.g. if params are (int, boolean), params = "IZ"
         var params = method.getParams().stream()
                 .map(param -> toJasminType(param.getType()))
                 .collect(Collectors.joining());
 
-        // Generate return type
+        // Return type descriptor
         var returnType = toJasminType(method.getReturnType());
 
-        code.append("\n.method ").append(modifier)
+        code.append("\n.method ")
+                .append(modifier)
                 .append(methodName)
                 .append("(").append(params).append(")")
-                .append(returnType).append(NL);
+                .append(returnType)
+                .append(NL);
 
-        // Calculate stack limit
-        int stackLimit = calculateStackLimit(method);
+        // Calculate stack/locals limits (assume these helper methods work correctly)
+        int stackLimit  = calculateStackLimit(method);
         int localsLimit = calculateLocalsLimit(method);
 
-        // Limits
         code.append(TAB).append(".limit stack ").append(stackLimit).append(NL);
         code.append(TAB).append(".limit locals ").append(localsLimit).append(NL);
 
-        // Instructions
-        for (var inst : method.getInstructions()) {
-            if (inst instanceof CondBranchInstruction) {
-                code.append(((CondBranchInstruction) inst).getLabel()).append(":\n");
-            } else if (inst instanceof GotoInstruction) {
-                code.append(((GotoInstruction) inst).getLabel()).append(":\n");
+        // ————— Emit each instruction, inserting labels exactly at targets —————
+        List<Instruction> instructions = method.getInstructions();
+        for (Instruction inst : instructions) {
+            // If this instruction is the target of some label, emit “thatLabel:”
+            if (isLabelTarget(inst)) {
+                String label = getLabelForInstruction(inst);
+                code.append(label).append(":").append(NL);
             }
 
-            if (inst instanceof ReturnInstruction) {
-                String lastLabel = method.getInstructions().stream()
-                        .filter(i -> i instanceof GotoInstruction)  // Pega o label do último goto
-                        .map(i -> ((GotoInstruction) i).getLabel())
-                        .reduce((first, second) -> second)
-                        .orElse(null);
-
-                if (lastLabel != null) {
-                    lastLabel = lastLabel.toLowerCase();
-                    code.append(lastLabel).append(":\n");  // Usa o label original do goto
-                }
-            }
-
-            var instCode = StringLines.getLines(apply(inst)).stream()
+            // Now convert `inst` → its Jasmin lines (apply(inst) returns a String, possibly
+            // multiple lines separated by NL).  We indent each line with one TAB.
+            String instCode = StringLines
+                    .getLines(apply(inst))
+                    .stream()
                     .collect(Collectors.joining(NL + TAB, TAB, NL));
+
             code.append(instCode);
         }
 
         code.append(".end method\n");
         currentMethod = null;
+
+        // (Optional) print out the generated Jasmin for debugging:
+        System.out.println("generateMethod → Jasmin code:\n" + code);
+
         return code.toString();
+    }
+
+    private boolean isLabelTarget(Instruction inst) {
+        return labelTargets.containsValue(inst);
+    }
+
+    private String getLabelForInstruction(Instruction inst) {
+        for (var entry : labelTargets.entrySet()) {
+            if (entry.getValue() == inst) {
+                return entry.getKey();
+            }
+        }
+        return null;  // should not happen if you only call this when isLabelTarget(inst) is true
     }
 
     private int calculateStackLimit(Method method) {
@@ -305,6 +362,7 @@ public class JasminGenerator {
         }
 
         code.append(storePrefix).append("_").append(reg.getVirtualReg()).append(NL);
+        System.out.println("generateAssign -> Jasmin code:\n" + code);
         return code.toString();
     }
 
@@ -465,6 +523,7 @@ public class JasminGenerator {
         }
 
         code.append(NL);
+        System.out.println("generateBinaryOp -> Jasmin code:\n" + code);
         return code.toString();
     }
 
@@ -489,6 +548,7 @@ public class JasminGenerator {
         }
 
         code.append(NL);
+        System.out.println("generateReturn -> Jasmin code:\n" + code);
         return code.toString();
     }
 
@@ -506,7 +566,7 @@ public class JasminGenerator {
             code.append("new ").append(className).append(NL);
             code.append("invokespecial ").append(className).append("/<init>()V").append(NL);
         }
-
+        System.out.println("generateNew -> Jasmin code:\n" + code);
         return code.toString();
     }
 
@@ -535,6 +595,7 @@ public class JasminGenerator {
                 .append(fieldType)
                 .append(NL);
 
+        System.out.println("generateGetField -> Jasmin code:\n" + code);
         return code.toString();
     }
 
@@ -560,6 +621,7 @@ public class JasminGenerator {
                 .append(fieldType)
                 .append(NL);
 
+        System.out.println("generatePutField -> Jasmin code:\n" + code);
         return code.toString();
     }
 
@@ -611,6 +673,7 @@ public class JasminGenerator {
                 .append(signature)
                 .append(NL);
 
+        System.out.println("generateInvokeVirtual -> Jasmin code:\n" + code);
         return code.toString();
     }
 
@@ -672,6 +735,7 @@ public class JasminGenerator {
                 .append(signature)
                 .append(NL);
 
+        System.out.println("generateInvokeStatic -> Jasmin code:\n" + code);
         return code.toString();
     }
 
@@ -684,6 +748,7 @@ public class JasminGenerator {
         String label = singleOpCondInst.getLabel();
         code.append("ifne ").append(label).append(NL);
 
+        System.out.println("generateSingleOpCond -> Jasmin code:\n" + code);
         return code.toString();
     }
 
@@ -708,6 +773,7 @@ public class JasminGenerator {
 
         code.append(instruction).append(" ").append(opCondInst.getLabel()).append(NL);
 
+        System.out.println("generateOpCond -> Jasmin code:\n" + code);
         return code.toString();
     }
 
@@ -726,7 +792,7 @@ public class JasminGenerator {
             code.append("iconst_1").append(NL);
             code.append("ixor").append(NL);
         }
-
+        System.out.println("generateUnaryOp -> Jasmin code:\n" + code);
         return code.toString();
     }
 
@@ -737,6 +803,7 @@ public class JasminGenerator {
         code.append(apply(arrayLengthInst.getOperands().getFirst()));
         code.append("arraylength").append(NL);
 
+        System.out.println("generateArrayLength -> Jasmin code:\n" + code);
         return code.toString();
     }
 }
