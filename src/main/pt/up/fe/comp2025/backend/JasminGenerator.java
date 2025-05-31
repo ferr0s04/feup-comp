@@ -802,12 +802,12 @@ public class JasminGenerator {
 
         // Determine the instruction based on the operation type
         String instruction = switch (opCondInst.getCondition().getOperation().getOpType()) {
-            case LTH -> "if_icmpge";  // Jump if left >= right (opposite of <)
-            case GTH -> "if_icmple";  // Jump if left <= right (opposite of >)
-            case LTE -> "if_icmpgt";  // Jump if left > right (opposite of <=)
-            case GTE -> "if_icmplt";  // Jump if left < right (opposite of >=)
-            case EQ -> "if_icmpne";   // Jump if left != right (opposite of ==)
-            case NEQ -> "if_icmpeq";  // Jump if left == right (opposite of !=)
+            case LTH -> "if_icmplt";  // Jump if left < right
+            case GTH -> "if_icmpgt";  // Jump if left > right
+            case LTE -> "if_icmple";  // Jump if left <= right
+            case GTE -> "if_icmpge";  // Jump if left >= right
+            case EQ -> "if_icmpeq";   // Jump if left == right
+            case NEQ -> "if_icmpne";  // Jump if left != right
             default -> throw new NotImplementedException("Unsupported operator: " +
                     opCondInst.getCondition().getOperation().getOpType());
         };
