@@ -40,6 +40,12 @@ public class JasminGenerator {
 
     private final FunctionClassMap<TreeNode, String> generators;
 
+    private Map<String, Instruction> labelTargets = new HashMap<>();
+
+    private int labelCounter = 0;
+
+    private static int cmpCounter = 0;
+
     public JasminGenerator(OllirResult ollirResult) {
         this.ollirResult = ollirResult;
 
@@ -96,8 +102,6 @@ public class JasminGenerator {
         return code;
     }
 
-    private Map<String, Instruction> labelTargets = new HashMap<>();
-    private int labelCounter = 0;
 
     private void preprocessLabels(Method method) {
         labelTargets.clear();
@@ -481,49 +485,86 @@ public class JasminGenerator {
     private String generateBinaryOp(BinaryOpInstruction binaryOp) {
         var code = new StringBuilder();
 
-        // Special case for AND operation
-        if (binaryOp.getOperation().getOpType() == OperationType.AND) {
-            // Load both operands
+        OperationType opType = binaryOp.getOperation().getOpType();
+
+        // If it’s a standalone “compare → produce boolean 0/1” (e.g. “10 < 20”), do the full 0/1 sequence:
+        if (opType == OperationType.LTH
+                || opType == OperationType.GTH
+                || opType == OperationType.LTE
+                || opType == OperationType.GTE
+                || opType == OperationType.EQ
+                || opType == OperationType.NEQ) {
+
+            // 1) Load left, then load right
             code.append(apply(binaryOp.getLeftOperand()));
             code.append(apply(binaryOp.getRightOperand()));
-            code.append("iand").append(NL);
+
+            // 2) Pick the correct if_icmpXxx mnemonic
+            String compareInsn = switch (opType) {
+                case LTH  -> "if_icmplt";
+                case GTH  -> "if_icmpgt";
+                case LTE  -> "if_icmple";
+                case GTE  -> "if_icmpge";
+                case EQ   -> "if_icmpeq";
+                case NEQ  -> "if_icmpne";
+                default   -> throw new NotImplementedException("Unhandled compare: " + opType);
+            };
+
+            // 3) Generate two unique labels
+            int thisId = cmpCounter++;
+            String trueLabel = "j_true_" + thisId;
+            String endLabel  = "j_end" + thisId;
+
+            // 4) Emit compare → if_icmpXxx trueLabel
+            code.append(compareInsn)
+                    .append(" ")
+                    .append(trueLabel)
+                    .append(NL);
+
+            // 5) False‐path: push 0, then jump to endLabel
+            code.append("iconst_0").append(NL);
+            code.append("goto ").append(endLabel).append(NL);
+
+            // 6) True‐path label and push 1
+            code.append(trueLabel).append(":").append(NL);
+            code.append("iconst_1").append(NL);
+
+            // 7) End label
+            code.append(endLabel).append(":").append(NL);
+
+            System.out.println("generateBinaryOp (compare) → Jasmin:\n" + code);
             return code.toString();
         }
 
-        if (binaryOp.getOperation().getOpType() == OperationType.ADD) {
-            // Check if right operand is constant 1
-            if (binaryOp.getRightOperand() instanceof LiteralElement literal &&
-                    literal.getLiteral().equals("1")) {
-                // Get the variable's register
-                if (binaryOp.getLeftOperand() instanceof Operand operand) {
-                    var reg = currentMethod.getVarTable().get(operand.getName());
-                    return "iinc " + reg.getVirtualReg() + " 1" + NL;
-                }
+        // Otherwise, handle non‐comparison arithmetic/bitwise ops:
+        // (This part is essentially the same as your old version for ADD, SUB, etc.)
+        if (opType == OperationType.ADD) {
+            // Special “iinc” if adding literal 1 to a local
+            if (binaryOp.getRightOperand() instanceof LiteralElement lit
+                    && lit.getLiteral().equals("1")
+                    && binaryOp.getLeftOperand() instanceof Operand operand) {
+                var reg = currentMethod.getVarTable().get(operand.getName());
+                return "iinc " + reg.getVirtualReg() + " 1" + NL;
             }
         }
 
-        // Load operands
+        // Standard arithmetic or bitwise:
         code.append(apply(binaryOp.getLeftOperand()));
         code.append(apply(binaryOp.getRightOperand()));
 
-        // Generate operation instruction
-        switch (binaryOp.getOperation().getOpType()) {
+        switch (opType) {
             case ADD -> code.append("iadd");
             case SUB -> code.append("isub");
             case MUL -> code.append("imul");
             case DIV -> code.append("idiv");
             case AND -> code.append("iand");
-            case OR -> code.append("ior");
-            case LTH -> code.append("iflt");
-            case GTH -> code.append("ifgt");
-            case EQ -> code.append("ifeq");
-            case NEQ -> code.append("ifne");
-            case GTE -> code.append("ifge");
-            default -> throw new NotImplementedException(binaryOp.getOperation().getOpType());
+            case OR  -> code.append("ior");
+            // We no longer reach a comparison case here because we handled them above
+            default  -> throw new NotImplementedException("BinaryOp not supported: " + opType);
         }
 
         code.append(NL);
-        System.out.println("generateBinaryOp -> Jasmin code:\n" + code);
+        System.out.println("generateBinaryOp (arith) → Jasmin:\n" + code);
         return code.toString();
     }
 
@@ -761,13 +802,13 @@ public class JasminGenerator {
 
         // Determine the instruction based on the operation type
         String instruction = switch (opCondInst.getCondition().getOperation().getOpType()) {
-            case LTH -> "if_icmpge";
-            case GTH -> "if_icmple";
-            case LTE -> "if_icmpgt";
-            case GTE -> "if_icmplt";
-            case EQ -> "if_icmpne";
-            case NEQ -> "if_icmpeq";
-            default -> throw new NotImplementedException("Operador não suportado: " +
+            case LTH -> "if_icmpge";  // Jump if left >= right (opposite of <)
+            case GTH -> "if_icmple";  // Jump if left <= right (opposite of >)
+            case LTE -> "if_icmpgt";  // Jump if left > right (opposite of <=)
+            case GTE -> "if_icmplt";  // Jump if left < right (opposite of >=)
+            case EQ -> "if_icmpne";   // Jump if left != right (opposite of ==)
+            case NEQ -> "if_icmpeq";  // Jump if left == right (opposite of !=)
+            default -> throw new NotImplementedException("Unsupported operator: " +
                     opCondInst.getCondition().getOperation().getOpType());
         };
 
@@ -777,8 +818,9 @@ public class JasminGenerator {
         return code.toString();
     }
 
+
     private String generateGoto(GotoInstruction gotoInst) {
-        return "goto " + gotoInst.getLabel().toLowerCase() + NL;
+        return "goto " + gotoInst.getLabel() + NL;
     }
 
     private String generateUnaryOp(UnaryOpInstruction unaryOpInst) {
