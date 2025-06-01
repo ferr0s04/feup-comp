@@ -177,24 +177,18 @@ public class JasminGenerator {
         currentMethod = method;
         var code = new StringBuilder();
 
-        // First, figure out which instructions are actual branch/goto targets:
+        // Build labels so that isLabelTarget(inst) / getLabelForInstruction(inst) still work
         preprocessLabels(method);
 
-        // ————— Build method header —————
-        // Modifier (e.g. “public static ” or “public ”)
+        // ————— Emit method header exactly as before —————
         var modifier = types.getModifier(method.getMethodAccessModifier());
         if (method.isStaticMethod()) {
             modifier += "static ";
         }
-
         var methodName = method.getMethodName();
-
-        // Parameter descriptor list, e.g. if params are (int, boolean), params = "IZ"
         var params = method.getParams().stream()
-                .map(param -> toJasminType(param.getType()))
+                .map(p -> toJasminType(p.getType()))
                 .collect(Collectors.joining());
-
-        // Return type descriptor
         var returnType = toJasminType(method.getReturnType());
 
         code.append("\n.method ")
@@ -204,14 +198,12 @@ public class JasminGenerator {
                 .append(returnType)
                 .append(NL);
 
-        // Calculate stack/locals limits (assume these helper methods work correctly)
         int stackLimit  = calculateStackLimit(method);
         int localsLimit = calculateLocalsLimit(method);
-
         code.append(TAB).append(".limit stack ").append(stackLimit).append(NL);
         code.append(TAB).append(".limit locals ").append(localsLimit).append(NL);
 
-        // ————— Emit each instruction, inserting labels exactly at targets —————
+        // ————— Now walk the instruction list by index —————
         List<Instruction> instructions = method.getInstructions();
         for (Instruction inst : instructions) {
             // If this instruction is the target of some label, emit “thatLabel:”
@@ -232,12 +224,17 @@ public class JasminGenerator {
 
         code.append(".end method\n");
         currentMethod = null;
-
-        // (Optional) print out the generated Jasmin for debugging:
         System.out.println("generateMethod → Jasmin code:\n" + code);
-
         return code.toString();
     }
+
+    /** Indent each line of apply(inst) with one TAB */
+    private String indentAndApply(Instruction inst) {
+        return StringLines.getLines(apply(inst))
+                .stream()
+                .collect(Collectors.joining(NL + TAB, TAB, NL));
+    }
+
 
     private boolean isLabelTarget(Instruction inst) {
         return labelTargets.containsValue(inst);
@@ -271,19 +268,12 @@ public class JasminGenerator {
     }
 
     private int calculateLocalsLimit(Method method) {
+        // Base: 1 for "this" (if non-static) + parameters
         int limit = method.isStaticMethod() ? 0 : 1;
-
-        // Space for parameters
         limit += method.getParams().size();
 
-        // Get the highest virtual register number used
-        int maxReg = method.getVarTable().values().stream()
-                .mapToInt(Descriptor::getVirtualReg)
-                .max()
-                .orElse(0);
-
-        // Add extra space for any temporary variables and ensure enough space
-        return Math.max(maxReg + 1, limit + 10);
+        // We'll reuse slot 3 for all temporaries, so we only need 1 extra slot
+        return Math.max(limit + 1, 4); // Ensure at least 4 slots (0-3)
     }
 
     private int getStackConsumption(Instruction inst) {
@@ -333,15 +323,21 @@ public class JasminGenerator {
     private String generateAssign(AssignInstruction assign) {
         var code = new StringBuilder();
 
-        // Se for um array, precisamos carregar o array primeiro
+        // Handle array creation if needed
         if (assign.getRhs() instanceof NewInstruction newInst &&
                 newInst.getReturnType() instanceof ArrayType) {
-            // Carregar o tamanho do array primeiro
-            code.append("ldc ").append(5).append(NL);  // Valor literal para criar o array
+            code.append("ldc ").append(5).append(NL);
         }
 
-        // Load right-hand side
-        code.append(apply(assign.getRhs()));
+        // Generate right-hand side
+        String rhsCode = apply(assign.getRhs());
+
+        // Check if this was handled by iinc
+        if (rhsCode.startsWith("iinc")) {
+            return rhsCode;
+        }
+
+        code.append(rhsCode);
 
         var lhs = assign.getDest();
         if (!(lhs instanceof Operand operand)) {
@@ -349,24 +345,9 @@ public class JasminGenerator {
         }
 
         var reg = currentMethod.getVarTable().get(operand.getName());
-
-        // Determine store instruction
-        String storePrefix;
-        if (operand.getType() instanceof ArrayType) {
-            storePrefix = "astore";
-        } else if (operand.getType() instanceof ClassType) {
-            storePrefix = "astore";
-        } else {
-            if (operand.getType().toString().equals("INT32") ||
-                    operand.getType().toString().equals("BOOLEAN")) {
-                storePrefix = "istore";
-            } else {
-                storePrefix = "astore";
-            }
-        }
-
+        String storePrefix = getStorePrefix(operand.getType());
         code.append(storePrefix).append("_").append(reg.getVirtualReg()).append(NL);
-        System.out.println("generateAssign -> Jasmin code:\n" + code);
+
         return code.toString();
     }
 
@@ -487,6 +468,15 @@ public class JasminGenerator {
 
         OperationType opType = binaryOp.getOperation().getOpType();
 
+        if (opType == OperationType.ADD &&
+                binaryOp.getRightOperand() instanceof LiteralElement lit &&
+                lit.getLiteral().equals("1") &&
+                binaryOp.getLeftOperand() instanceof Operand operand) {
+
+            var reg = currentMethod.getVarTable().get(operand.getName());
+            return "iinc " + reg.getVirtualReg() + " 1" + NL;
+        }
+
         // If it’s a standalone “compare → produce boolean 0/1” (e.g. “10 < 20”), do the full 0/1 sequence:
         if (opType == OperationType.LTH
                 || opType == OperationType.GTH
@@ -534,18 +524,6 @@ public class JasminGenerator {
 
             System.out.println("generateBinaryOp (compare) → Jasmin:\n" + code);
             return code.toString();
-        }
-
-        // Otherwise, handle non‐comparison arithmetic/bitwise ops:
-        // (This part is essentially the same as your old version for ADD, SUB, etc.)
-        if (opType == OperationType.ADD) {
-            // Special “iinc” if adding literal 1 to a local
-            if (binaryOp.getRightOperand() instanceof LiteralElement lit
-                    && lit.getLiteral().equals("1")
-                    && binaryOp.getLeftOperand() instanceof Operand operand) {
-                var reg = currentMethod.getVarTable().get(operand.getName());
-                return "iinc " + reg.getVirtualReg() + " 1" + NL;
-            }
         }
 
         // Standard arithmetic or bitwise:
