@@ -1,7 +1,0 @@
-class main {
-
-    int[] nao() {
-        return [2,3];
-    }
-
-}

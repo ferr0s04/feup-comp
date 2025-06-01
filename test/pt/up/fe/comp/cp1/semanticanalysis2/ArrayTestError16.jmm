@@ -1,7 +1,0 @@
-class main {
-
-    boolean... nao() {
-        return 1;
-    }
-
-}

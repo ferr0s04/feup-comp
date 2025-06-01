@@ -1,8 +1,0 @@
-class main {
-
-    int nao() {
-        String... a;
-        return 1;
-    }
-
-}

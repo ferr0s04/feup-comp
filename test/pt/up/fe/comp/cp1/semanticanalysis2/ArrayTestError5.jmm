@@ -1,8 +1,0 @@
-class main {
-
-    int nao() {
-        boolean... a;
-        return 1;
-    }
-
-}

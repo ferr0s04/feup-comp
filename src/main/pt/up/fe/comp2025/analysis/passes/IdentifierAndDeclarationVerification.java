@@ -2,7 +2,6 @@ package pt.up.fe.comp2025.analysis.passes;
 
 import pt.up.fe.comp.jmm.analysis.table.Symbol;
 import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
-import pt.up.fe.comp.jmm.analysis.table.Type;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp2025.analysis.AnalysisVisitor;
 import pt.up.fe.comp2025.ast.Kind;
@@ -31,18 +30,6 @@ public class IdentifierAndDeclarationVerification extends AnalysisVisitor {
 
         Set<String> fields = new HashSet<>();
         for (Symbol field : table.getFields()) {
-            if (field.getType().isArray()) {
-                // If the parameter is an array, it should int
-                boolean typeIsVarargs = Boolean.parseBoolean(field.getType().get("isVarargs"));
-                if( typeIsVarargs ) {
-                    addReport(newError(classNode, "Varargs not allowed outside method parameters."));
-                    return null;
-                }
-                if(!field.getType().getName().equals("int")) {
-                    addReport(newError(classNode, "Array must be of type int."));
-                    return null;
-                }
-            }
             System.out.println("Field: " + field.getName());
             if (!fields.add(field.getName())) {
                 addReport(newError(classNode, "Duplicate field: " + field.getName()));
@@ -57,28 +44,8 @@ public class IdentifierAndDeclarationVerification extends AnalysisVisitor {
      * Stores the current method name and static flag when visiting method declarations.
      */
     private Void visitMethodDecl(JmmNode method, SymbolTable table) {
-        if (method.hasAttribute("isWrong") && method.getBoolean("isWrong", false)) {
-            addReport(newError(method, "Method declaration has something wrong."));
-            return null;
-        }
         currentMethod = method.get("name");
         isStaticMethod = method.getOptional("isStatic").map(Boolean::parseBoolean).orElse(false);
-        String typeName = method.getChildren().getFirst().get("name");
-        if(method.getChild(0).hasAttribute("isArray")) {
-            boolean typeIsArray = Boolean.parseBoolean(method.getChildren().getFirst().get("isArray"));
-            boolean typeIsVarargs = Boolean.parseBoolean(method.getChildren().getFirst().get("isVarargs"));
-            if( typeIsVarargs ) {
-                addReport(newError(method, "Varargs not allowed outside method parameters."));
-                return null;
-            }
-            if (typeIsArray) {
-                if(!typeName.equals("int")) {
-                    addReport(newError(method, "Array must be of type int."));
-                    return null;
-                }
-            }
-        }
-
         return null;
     }
 

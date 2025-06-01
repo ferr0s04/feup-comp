@@ -1,9 +1,0 @@
-class main {
-    boolean[] a;
-
-    int nao() {
-        boolean[] a;
-        return 1;
-    }
-
-}

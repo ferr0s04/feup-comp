@@ -111,11 +111,6 @@ public class JmmSymbolTableBuilder {
                 }
             }
 
-            if (methodNode.hasAttribute("isMain") && methodNode.get("isMain").equals("true")) {
-                // Special handling for main method - manually add a parameter for the String array
-                paramList.add(new Symbol(new Type("String", true), "args"));
-            }
-
             // Extract local variables
             var localVars = new ArrayList<Symbol>();
             for (var varNode : methodNode.getChildren(VAR_DECL)) {
@@ -139,7 +134,6 @@ public class JmmSymbolTableBuilder {
         boolean isArray = typeNode.hasAttribute("isArray") && typeNode.get("isArray").equals("true");
 
         Type type = new Type(typeName, isArray);
-        type.putObject("isVarargs", typeNode.hasAttribute("isVarargs") && typeNode.get("isVarargs").equals("true"));
 
         boolean imported = typeUtils.isImported(typeName);
         type.putObject("isImported", imported);
