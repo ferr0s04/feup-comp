@@ -121,13 +121,17 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
             String methodName = (methodNode != null) ? methodNode.get("name") : null;
 
             Type varType = Stream.concat(
-                            table.getLocalVariables(methodName).stream(),
-                            table.getParameters(methodName).stream()
+                            Stream.concat(
+                                    table.getLocalVariables(methodName).stream(),
+                                    table.getParameters(methodName).stream()
+                            ),
+                            table.getFields().stream()
                     )
                     .filter(var -> var.getName().equals(varName))
                     .map(Symbol::getType)
                     .findFirst()
                     .orElse(null);
+
 
             if (varType == null) {
                 addReport(newError(stmt, "Variable " + varName + " not in scope."));

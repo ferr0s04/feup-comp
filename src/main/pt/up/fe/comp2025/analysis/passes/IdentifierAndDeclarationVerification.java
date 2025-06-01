@@ -1,9 +1,13 @@
 package pt.up.fe.comp2025.analysis.passes;
 
+import pt.up.fe.comp.jmm.analysis.table.Symbol;
 import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp2025.analysis.AnalysisVisitor;
 import pt.up.fe.comp2025.ast.Kind;
+
+import java.util.HashSet;
+import java.util.Set;
 
 public class IdentifierAndDeclarationVerification extends AnalysisVisitor {
 
@@ -23,6 +27,16 @@ public class IdentifierAndDeclarationVerification extends AnalysisVisitor {
      */
     private Void visitClassDecl(JmmNode classNode, SymbolTable table) {
         className = classNode.get("name");
+
+        Set<String> fields = new HashSet<>();
+        for (Symbol field : table.getFields()) {
+            System.out.println("Field: " + field.getName());
+            if (!fields.add(field.getName())) {
+                addReport(newError(classNode, "Duplicate field: " + field.getName()));
+                return null;
+            }
+        }
+
         return null;
     }
 

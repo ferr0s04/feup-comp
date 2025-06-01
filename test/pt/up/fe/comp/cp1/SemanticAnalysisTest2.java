@@ -2,7 +2,11 @@ package pt.up.fe.comp.cp1;
 
 import org.junit.Test;
 import pt.up.fe.comp.TestUtils;
+import pt.up.fe.comp.jmm.analysis.table.Symbol;
 import pt.up.fe.specs.util.SpecsIo;
+
+import java.util.HashSet;
+import java.util.Set;
 
 public class SemanticAnalysisTest2 {
 
@@ -61,11 +65,11 @@ public class SemanticAnalysisTest2 {
         TestUtils.noErrors(result);
     }
 
-    /*@Test
-    public void DuplicatedTest2() { // BAD
+    @Test
+    public void DuplicatedTest2() { // GOOD
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/DuplicatedTest2.jmm"));
         TestUtils.noErrors(result);
-    }*/
+    }
 
     @Test
     public void DuplicatedTest3() { // GOOD
@@ -85,12 +89,12 @@ public class SemanticAnalysisTest2 {
         TestUtils.noErrors(result);
     }
 
-    /*@Test
-    public void DuplicatedTestError() { // BAD
+    @Test
+    public void DuplicatedTestError() { // GOOD
         // Site: ERROR@semantic, line 1, col 0: Duplicated fields
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/DuplicatedTestError.jmm"));
         TestUtils.mustFail(result);
-    }*/
+    }
 
     @Test
     public void DuplicatedTestError2() { // GOOD
@@ -114,20 +118,18 @@ public class SemanticAnalysisTest2 {
     }
 
     @Test
-    public void DuplicatedTestError5() { // BAD - Parameters are also being saved as locals (duplication)
+    public void DuplicatedTestError5() { // GOOD
         // Site: ERROR@semantic, line 4, col 4: Local variable 'x' redefined a parameter in method x
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/DuplicatedTestError5.jmm"));
-        // Print AST
-        System.out.println("\n---\n" + result.getRootNode().toTree() + "\n---\n");
         TestUtils.mustFail(result);
     }
 
-    /*@Test
-    public void DuplicatedTestError6() { // BAD
+    @Test
+    public void DuplicatedTestError6() { // GOOD
         // Site: ERROR@semantic, line 1, col 0: Duplicated methods
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/DuplicatedTestError6.jmm"));
         TestUtils.mustFail(result);
-    }*/
+    }
 
     // ----- ImportTest -------------------------------------------------------------
 
