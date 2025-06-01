@@ -380,6 +380,53 @@ public class JasminGenerator {
             }
         }
 
+        var lhs = assign.getDest();
+
+        // Handle array store operation
+        if (lhs instanceof ArrayOperand arrayOperand) {
+            // First, load the array reference
+            String arrayVarName = arrayOperand.getName();
+            Descriptor arrayReg = currentMethod.getVarTable().get(arrayVarName);
+            if (arrayReg == null) {
+                throw new RuntimeException("Array variable '" + arrayVarName + "' not found in varTable.");
+            }
+            int arrayRegNum = arrayReg.getVirtualReg();
+            // Always use aload for array references
+            if (arrayRegNum > 3) {
+                code.append("aload ").append(arrayRegNum).append(NL);
+            } else {
+                code.append("aload_").append(arrayRegNum).append(NL);
+            }
+
+            // Then load the index (properly handle both literals and variables)
+            Element indexElement = arrayOperand.getIndexOperands().getFirst();
+            if (indexElement instanceof Operand indexOperand) {
+                Descriptor indexReg = currentMethod.getVarTable().get(indexOperand.getName());
+                if (indexReg != null) {
+                    int indexRegNum = indexReg.getVirtualReg();
+                    if (indexRegNum > 3) {
+                        code.append("iload ").append(indexRegNum).append(NL);
+                    } else {
+                        code.append("iload_").append(indexRegNum).append(NL);
+                    }
+                } else {
+                    code.append(apply(indexElement));
+                }
+            } else {
+                code.append(apply(indexElement));
+            }
+
+            // Now push the value to store (RHS)
+            String rhsCode = apply(assign.getRhs());
+            if (rhsCode.startsWith("iinc")) {
+                return rhsCode;
+            }
+            code.append(rhsCode);
+
+            // Finally do the store
+            code.append("iastore").append(NL);
+            return code.toString();
+        }
         // Generate right-hand side
         String rhsCode = apply(assign.getRhs());
         if (rhsCode.startsWith("iinc")) {
@@ -387,16 +434,8 @@ public class JasminGenerator {
         }
         code.append(rhsCode);
 
-        var lhs = assign.getDest();
-
-        // Handle array store operation
-        if (lhs instanceof ArrayOperand arrayOperand) {
-            code.append(apply(arrayOperand.getIndexOperands().getFirst()));
-            code.append("iastore").append(NL);
-            return code.toString();
-        }
         // Handle regular operand
-        else if (lhs instanceof Operand operand) {
+        if (lhs instanceof Operand operand) {
             var reg = currentMethod.getVarTable().get(operand.getName());
             String storePrefix = getStorePrefix(operand.getType());
             int localIndex = reg.getVirtualReg();
@@ -476,20 +515,19 @@ public class JasminGenerator {
                 throw new RuntimeException("Array variable '" + arrayVarName + "' not found in varTable.");
             }
 
-            // Load array reference - use fixed slot for temporaries
-            int arrayRegNum = isTemporary(arrayVarName) ? 3 : arrayReg.getVirtualReg();
+            int arrayRegNum = arrayReg.getVirtualReg();
             if (arrayRegNum > 3) {
                 code.append("aload ").append(arrayRegNum).append(NL);
             } else {
                 code.append("aload_").append(arrayRegNum).append(NL);
             }
 
-            // Load index - use fixed slot for temporaries
+            // Load index
             Element indexElement = arrayOperand.getIndexOperands().getFirst();
             if (indexElement instanceof Operand indexOperand) {
                 Descriptor indexReg = currentMethod.getVarTable().get(indexOperand.getName());
                 if (indexReg != null) {
-                    int indexRegNum = isTemporary(indexOperand.getName()) ? 3 : indexReg.getVirtualReg();
+                    int indexRegNum = indexReg.getVirtualReg();
                     if (indexRegNum > 3) {
                         code.append("iload ").append(indexRegNum).append(NL);
                     } else {
@@ -519,8 +557,7 @@ public class JasminGenerator {
                             currentMethod.getParams().indexOf(param) + 1;
                     return getLoadPrefix(operand.getType()) + " " + paramIndex + NL;
                 }
-
-        }
+            }
 
             // Check if it's a static field
             if (ollirResult.getOllirClass().getImports().stream()
@@ -531,8 +568,7 @@ public class JasminGenerator {
             throw new RuntimeException("Variable '" + operand.getName() + "' not found in varTable.");
         }
 
-        // For local variables, use slot 3 for temporaries
-        int localIndex = isTemporary(operand.getName()) ? 3 : reg.getVirtualReg();
+        int localIndex = reg.getVirtualReg();
 
         if (localIndex > 3) {
             return getLoadPrefix(operand.getType()) + " " + localIndex + NL;
@@ -1008,4 +1044,3 @@ public class JasminGenerator {
         return code.toString();
     }
 }
-
