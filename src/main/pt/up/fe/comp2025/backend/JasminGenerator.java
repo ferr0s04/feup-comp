@@ -16,6 +16,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -336,9 +338,42 @@ public class JasminGenerator {
         if (assign.getRhs() instanceof NewInstruction newInst &&
                 newInst.getReturnType() instanceof ArrayType) {
             // Get the array size from the NewInstruction's first operand
-            Element sizeOperand = newInst.getOperands().getFirst();
-            if (sizeOperand instanceof LiteralElement literal) {
-                code.append("ldc ").append(literal.getLiteral()).append(NL);
+            Element sizeOperand = newInst.getArguments().getFirst();
+            if (sizeOperand instanceof Operand) {
+                String varName = ((Operand) sizeOperand).getName();
+                String varValue = null;
+
+                // Search through all descriptors in the variable table
+                for (Instruction inst : currentMethod.getInstructions()) {
+                    if (inst instanceof AssignInstruction assignInst) {
+                        String destStr = assignInst.getDest().toString();  // e.g., "Operand: temp0.INT32"
+
+                        Matcher matcher = Pattern.compile("Operand:\\s*(\\w+)\\.").matcher(destStr);
+                        if (matcher.find()) {
+                            String destName = matcher.group(1);
+
+                            if (destName.equals(varName)) {
+                                String rhsStr = assignInst.getRhs().toString();
+
+                                Matcher matcher2 = Pattern.compile("LiteralElement:\\s*(\\d+)\\.").matcher(rhsStr);
+                                if (matcher2.find()) {
+                                    varValue = matcher2.group(1);
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (varValue != null) {
+                    code.append("ldc ").append(varValue).append(NL);
+                } else {
+                    // If we couldn't find a constant value, load the variable instead
+                    code.append(apply(sizeOperand));
+                }
+            } else if (sizeOperand instanceof LiteralElement) {
+                // Handle literal values directly
+                code.append("ldc ").append(((LiteralElement) sizeOperand).getLiteral()).append(NL);
             } else {
                 // Default fallback if we can't determine the size
                 code.append("ldc ").append(5).append(NL);
