@@ -1,0 +1,7 @@
+class main {
+
+    String[] nao() {
+        return 1;
+    }
+
+}

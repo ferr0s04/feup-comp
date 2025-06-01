@@ -1,0 +1,9 @@
+class main {
+    boolean... a;
+
+    int nao() {
+
+        return 1;
+    }
+
+}

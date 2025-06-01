@@ -335,6 +335,12 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
         TypeUtils typeUtils = new TypeUtils(table);
         String methodName = methodDecl.get("name");
         Type returnType = table.getReturnType(methodName);
+        boolean isMain = methodDecl.getBoolean("isMain", false);
+
+        if (methodDecl.hasAttribute("isWrong") && methodDecl.getBoolean("isWrong", false)) {
+            addReport(newError(methodDecl, "Method declaration has something wrong."));
+            return null;
+        }
 
         Set<String> methodNames = new HashSet<>();
         for (String name : table.getMethods()) {
@@ -346,6 +352,13 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
 
         Set<String> paramNames = new HashSet<>();
         for (Symbol param : table.getParameters(methodName)) {
+            if (param.getType().isArray()) {
+                // If the parameter is an array, it should int
+                if((!param.getType().getName().equals("int")) && !isMain) {
+                    addReport(newError(methodDecl, "Array must be of type int."));
+                    return null;
+                }
+            }
             if (!paramNames.add(param.getName())) {
                 addReport(newError(methodDecl, "Duplicate parameter name: " + param.getName()));
                 return null;
@@ -354,6 +367,18 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
 
         Set<String> localVarNames = new HashSet<>();
         for (Symbol local : table.getLocalVariables(methodName)) {
+            if (local.getType().isArray()) {
+                // If the parameter is an array, it should int
+                boolean typeIsVarargs = Boolean.parseBoolean(local.getType().get("isVarargs"));
+                if( typeIsVarargs ) {
+                    addReport(newError(methodDecl, "Varargs not allowed outside method parameters."));
+                    return null;
+                }
+                if(!local.getType().getName().equals("int")) {
+                    addReport(newError(methodDecl, "Array must be of type int."));
+                    return null;
+                }
+            }
             if (!localVarNames.add(local.getName())) {
                 addReport(newError(methodDecl, "Duplicate local variable name: " + local.getName()));
                 return null;
@@ -367,9 +392,6 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
                 return null;
             }
         }
-
-        boolean isMain = methodDecl.getBoolean("isMain", false);
-
 
         if (isMain) {
             if(!methodName.equals("main")){ // Verificar que se chama Main

@@ -25,6 +25,10 @@ public class MethodCallVerificationVisitor extends AnalysisVisitor {
      * Stores the current method's name and whether it's static.
      */
     private Void visitMethodDecl(JmmNode methodNode, SymbolTable table) {
+        if (methodNode.hasAttribute("isWrong") && methodNode.getBoolean("isWrong", false)) {
+            addReport(newError(methodNode, "Method declaration has something wrong."));
+            return null;
+        }
         currentMethod = methodNode.get("name"); // Method name
         isStaticMethod = Boolean.parseBoolean(methodNode.getOptional("isStatic").orElse("false"));
         return null;
