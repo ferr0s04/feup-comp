@@ -254,7 +254,7 @@ public class JasminGenerator {
         }
 
         // Add margin for safety
-        return maxStack + 3;
+        return maxStack + 5;
     }
 
     private int calculateLocalsLimit(Method method) {
@@ -262,8 +262,21 @@ public class JasminGenerator {
         int limit = method.isStaticMethod() ? 0 : 1;
         limit += method.getParams().size();
 
-        // We'll reuse slot 3 for all temporaries, so we only need 1 extra slot
-        return Math.max(limit + 1, 4); // Ensure at least 4 slots (0-3)
+        // Find the highest numbered local used in the method
+        int maxLocal = limit;
+        for (Instruction inst : method.getInstructions()) {
+            if (inst instanceof AssignInstruction assign) {
+                if (assign.getDest() instanceof Operand operand) {
+                    Descriptor reg = method.getVarTable().get(operand.getName());
+                    if (reg != null) {
+                        maxLocal = Math.max(maxLocal, reg.getVirtualReg());
+                    }
+                }
+            }
+        }
+
+        // Ensure we have at least 4 slots (0-3) and add 1 for safety
+        return Math.max(maxLocal + 1, 4);
     }
 
     private int getStackConsumption(Instruction inst) {
@@ -322,42 +335,41 @@ public class JasminGenerator {
         // Handle array creation if needed
         if (assign.getRhs() instanceof NewInstruction newInst &&
                 newInst.getReturnType() instanceof ArrayType) {
-            code.append("ldc ").append(5).append(NL); // Default array size
+            // Get the array size from the NewInstruction's first operand
+            Element sizeOperand = newInst.getOperands().getFirst();
+            if (sizeOperand instanceof LiteralElement literal) {
+                code.append("ldc ").append(literal.getLiteral()).append(NL);
+            } else {
+                // Default fallback if we can't determine the size
+                code.append("ldc ").append(5).append(NL);
+            }
         }
 
         // Generate right-hand side
         String rhsCode = apply(assign.getRhs());
-
-        // Check if this was handled by iinc
         if (rhsCode.startsWith("iinc")) {
             return rhsCode;
         }
-
         code.append(rhsCode);
 
         var lhs = assign.getDest();
 
         // Handle array store operation
         if (lhs instanceof ArrayOperand arrayOperand) {
-            // Stack should be: array, index, value
-            code.append(apply(arrayOperand.getIndexOperands().getFirst())); // Load index
-            code.append("iastore").append(NL); // Store value in array[index]
+            code.append(apply(arrayOperand.getIndexOperands().getFirst()));
+            code.append("iastore").append(NL);
             return code.toString();
         }
         // Handle regular operand
         else if (lhs instanceof Operand operand) {
             var reg = currentMethod.getVarTable().get(operand.getName());
             String storePrefix = getStorePrefix(operand.getType());
-            int tempReg = 3;
-            if (isTemporary(operand.getName())) {
-                code.append(getStorePrefix(operand.getType()))
-                        .append("_").append(tempReg).append(NL);
+            int localIndex = reg.getVirtualReg();
+
+            if (localIndex > 3) {
+                code.append(storePrefix).append(" ").append(localIndex).append(NL);
             } else {
-                if (reg.getVirtualReg() > 3) {
-                    code.append(storePrefix).append(" ").append(reg.getVirtualReg()).append(NL);
-                } else {
-                    code.append(storePrefix).append("_").append(reg.getVirtualReg()).append(NL);
-                }
+                code.append(storePrefix).append("_").append(localIndex).append(NL);
             }
         }
         else {
@@ -467,14 +479,13 @@ public class JasminGenerator {
             // Check if it's a parameter
             for (Element param : currentMethod.getParams()) {
                 if (param instanceof Operand && ((Operand) param).getName().equals(operand.getName())) {
-                    // Get the index of the parameter and add offset for non-static methods
                     int paramIndex = currentMethod.isStaticMethod() ?
                             currentMethod.getParams().indexOf(param) :
                             currentMethod.getParams().indexOf(param) + 1;
-
                     return getLoadPrefix(operand.getType()) + " " + paramIndex + NL;
                 }
-            }
+
+        }
 
             // Check if it's a static field
             if (ollirResult.getOllirClass().getImports().stream()
