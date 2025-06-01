@@ -63,18 +63,20 @@ public class IdentifierAndDeclarationVerification extends AnalysisVisitor {
         }
         currentMethod = method.get("name");
         isStaticMethod = method.getOptional("isStatic").map(Boolean::parseBoolean).orElse(false);
-        String typeName = method.getChildren().getFirst().get("name");
-        if(method.getChild(0).hasAttribute("isArray")) {
-            boolean typeIsArray = Boolean.parseBoolean(method.getChildren().getFirst().get("isArray"));
-            boolean typeIsVarargs = Boolean.parseBoolean(method.getChildren().getFirst().get("isVarargs"));
-            if( typeIsVarargs ) {
-                addReport(newError(method, "Varargs not allowed outside method parameters."));
-                return null;
-            }
-            if (typeIsArray) {
-                if(!typeName.equals("int")) {
-                    addReport(newError(method, "Array must be of type int."));
+        if(!(method.getBoolean("isMain", false))) {
+            if (method.getChild(0).hasAttribute("isArray")) {
+                String typeName = method.getChild(0).get("name");
+                boolean typeIsArray = Boolean.parseBoolean(method.getChildren().getFirst().get("isArray"));
+                boolean typeIsVarargs = Boolean.parseBoolean(method.getChildren().getFirst().get("isVarargs"));
+                if (typeIsVarargs) {
+                    addReport(newError(method, "Varargs not allowed outside method parameters."));
                     return null;
+                }
+                if (typeIsArray) {
+                    if (!typeName.equals("int")) {
+                        addReport(newError(method, "Array must be of type int."));
+                        return null;
+                    }
                 }
             }
         }
