@@ -6,6 +6,7 @@ import pt.up.fe.comp.jmm.analysis.table.Type;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp2025.analysis.AnalysisVisitor;
 import pt.up.fe.comp2025.ast.Kind;
+import pt.up.fe.comp2025.ast.TypeUtils;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -97,9 +98,11 @@ public class IdentifierAndDeclarationVerification extends AnalysisVisitor {
             return null;
         }
 
-        if (!isDeclared(varName, table)) {
-            addReport(newError(varRefExpr, "Variable '" + varName + "' is not declared."));
+        if(isDeclared(varName, table)) {
+            return null;
         }
+
+        addReport(newError(varRefExpr, "Variable '" + varName + "' is not declared."));
 
         return null;
     }
@@ -108,11 +111,11 @@ public class IdentifierAndDeclarationVerification extends AnalysisVisitor {
      * Checks if a variable is declared in the method's parameters, local variables, or fields.
      */
     private boolean isDeclared(String varName, SymbolTable table) {
-        return table.getParameters(currentMethod).stream().anyMatch(param -> param.getName().equals(varName)) ||
-                table.getLocalVariables(currentMethod).stream().anyMatch(var -> var.getName().equals(varName)) ||
+        TypeUtils typeUtils = new TypeUtils(table);
+        return table.getLocalVariables(currentMethod).stream().anyMatch(var -> var.getName().equals(varName)) ||
+                table.getParameters(currentMethod).stream().anyMatch(var -> var.getName().equals(varName)) ||
                 table.getFields().stream().anyMatch(field -> field.getName().equals(varName)) ||
-                table.getImports().stream().anyMatch(name -> name.equals(varName) || name.endsWith("." + varName));
-
+                typeUtils.isImported(varName);
     }
 
 }

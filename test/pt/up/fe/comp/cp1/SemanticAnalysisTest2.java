@@ -259,11 +259,11 @@ public class SemanticAnalysisTest2 {
 
     // ----- ImportTest -------------------------------------------------------------
 
-    /*@Test
-    public void ImportTest() { // BAD
+    @Test
+    public void ImportTest() { // GOOD
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/ImportTest.jmm"));
         TestUtils.noErrors(result);
-    }*/
+    }
 
     @Test
     public void ImportTest2() { // GOOD
@@ -271,23 +271,23 @@ public class SemanticAnalysisTest2 {
         TestUtils.noErrors(result);
     }
 
-    /*@Test
-    public void ImportTest3() { // BAD
+    @Test
+    public void ImportTest3() { // GOOD
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/ImportTest3.jmm"));
         TestUtils.noErrors(result);
-    }*/
+    }
 
-    /*@Test
-    public void ImportTest4() { // BAD
+    @Test
+    public void ImportTest4() { // GOOD
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/ImportTest4.jmm"));
         TestUtils.noErrors(result);
-    }*/
+    }
 
-    /*@Test
-    public void ImportTest5() { // BAD
+    @Test
+    public void ImportTest5() { // GOOD
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/ImportTest5.jmm"));
         TestUtils.noErrors(result);
-    }*/
+    }
 
     @Test
     public void ImportTestError() { // GOOD
@@ -296,19 +296,20 @@ public class SemanticAnalysisTest2 {
         TestUtils.mustFail(result);
     }
 
-    /*@Test
-    public void ImportTestError2() { // BAD
+    @Test
+    public void ImportTestError2() { // GOOD
         // Site: ERROR@semantic, line 1, col 0: Duplicated imported class 'c'
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/ImportTestError2.jmm"));
+        System.out.println(result.getRootNode().toTree());
         TestUtils.mustFail(result);
-    }*/
+    }
 
-    /*@Test
-    public void ImportTestError3() { // BAD
+    @Test
+    public void ImportTestError3() { //
         // Site: ERROR@semantic, line 9, col 8: Return value of type incompatible (Type [name=a, isArray=false]) with method return type (Type [name=int, isArray=false])
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/ImportTestError3.jmm"));
         TestUtils.mustFail(result);
-    }*/
+    }
 
     @Test
     public void ImportTestError4() { // GOOD
@@ -434,19 +435,19 @@ public class SemanticAnalysisTest2 {
         TestUtils.mustFail(result);
     }
 
-    /*@Test
-    public void MethodCallTestError2() { // BAD
+    @Test
+    public void MethodCallTestError2() { // GOOD
         // Site: ERROR@semantic, line 4, col 8: Could not find method 'undefinedMethod'
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/MethodCallTestError2.jmm"));
         TestUtils.mustFail(result);
-    }*/
+    }
 
-    /*@Test
-    public void MethodCallTestError3() { // BAD
+    @Test
+    public void MethodCallTestError3() { // GOOD
         // Site: ERROR@semantic, line 9, col 12: Expected method to receive 1 arguments, but got 2
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/MethodCallTestError3.jmm"));
         TestUtils.mustFail(result);
-    }*/
+    }
 
     /*@Test
     public void MethodCallTestError4() { // BAD
@@ -455,21 +456,22 @@ public class SemanticAnalysisTest2 {
         TestUtils.mustFail(result);
     }*/
 
-    /*@Test
+    @Test
     public void MethodCallTestError5() { // BAD
         // Site: ERROR@semantic, line 5, col 17: Found 'this' inside static method
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/MethodCallTestError5.jmm"));
+        System.out.println(result.getRootNode().toTree());
         TestUtils.mustFail(result);
-    }*/
+    }
 
     // ----- NArgsTest -------------------------------------------------------------
 
-    /*@Test
-    public void NArgsError() { // BAD
+    @Test
+    public void NArgsError() { // GOOD
         // Site: ERROR@semantic, line 4, col 12: Expected method to receive 1 arguments, but got 0
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/NArgsError.jmm"));
         TestUtils.mustFail(result);
-    }*/
+    }
 
     // ----- PublicTest -------------------------------------------------------------
 
@@ -493,29 +495,29 @@ public class SemanticAnalysisTest2 {
         TestUtils.noErrors(result);
     }
 
-    /*@Test
-    public void ReturnTestError() { // BAD
+    @Test
+    public void ReturnTestError() { // GOOD
         // Site: ERROR@semantic, line 3, col 4: Detected unsupported feature: methods with more than one return statement.
         // Although the provided code might be valid in Java, this compiler does not support it because it is not required by the project specification.
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/ReturnTestError.jmm"));
         TestUtils.mustFail(result);
-    }*/
+    }
 
-    /*@Test
-    public void ReturnTestError2() { // BAD
+    @Test
+    public void ReturnTestError2() { // GOOD
         // Site: ERROR@semantic, line 3, col 4: Detected unsupported feature: return statement that is not the last statement in a method.
         // Although the provided code might be valid in Java, this compiler does not support it because it is not required by the project specification.
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/ReturnTestError2.jmm"));
         TestUtils.mustFail(result);
-    }*/
+    }
 
-    /*@Test
-    public void ReturnTestError3() { // BAD
+    @Test
+    public void ReturnTestError3() { // GOOD
         // Site: ERROR@semantic, line 3, col 4: Detected unsupported feature: return statement that is not the last statement in a method.
         // Although the provided code might be valid in Java, this compiler does not support it because it is not required by the project specification.
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/ReturnTestError3.jmm"));
         TestUtils.mustFail(result);
-    }*/
+    }
 
     // ----- ThisTest -------------------------------------------------------------
 
@@ -525,22 +527,23 @@ public class SemanticAnalysisTest2 {
         TestUtils.noErrors(result);
     }
 
-    /*@Test
+    @Test
     public void ThisTestError() { // BAD
         // Site: ERROR@semantic, line 4, col 12: Found 'this' inside static method
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/ThisTestError.jmm"));
         // Print AST
         // System.out.println(result.getRootNode().toTree());
         TestUtils.mustFail(result);
-    }*/
+    }
 
     // ----- VarargsTest -------------------------------------------------------------
 
-    /*@Test
+    @Test
     public void VarargsTest() { // BAD
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/VarargsTest.jmm"));
+        System.out.println(result.getRootNode().toTree());
         TestUtils.noErrors(result);
-    }*/
+    }
 
     @Test
     public void VarargsTest2() { // GOOD
@@ -573,14 +576,14 @@ public class SemanticAnalysisTest2 {
     }
 
     @Test
-    public void VarargsTestError() { // BAD
+    public void VarargsTestError() { // GOOD
         // Site: ERROR@semantic, line 2, col 4: Found varargs outside of method parameters
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/VarargsTestError.jmm"));
         TestUtils.mustFail(result);
     }
 
     @Test
-    public void VarargsTestError2() { // BAD
+    public void VarargsTestError2() { // GOOD
         // Site: ERROR@semantic, line 3, col 4: Found varargs outside of method parameters
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/VarargsTestError2.jmm"));
         TestUtils.mustFail(result);
@@ -594,14 +597,14 @@ public class SemanticAnalysisTest2 {
     }
 
     @Test
-    public void VarargsTestError4() { // BAD
+    public void VarargsTestError4() { // GOOD
         // Site: ERROR@semantic, line 3, col 8: Found varargs outside of method parameters
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/VarargsTestError4.jmm"));
         TestUtils.mustFail(result);
     }
 
     @Test
-    public void VarargsTestError5() { // BAD
+    public void VarargsTestError5() { // GOOD
         // Site: ERROR@semantic, line 2, col 4: Found varargs outside of method parameters
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/VarargsTestError5.jmm"));
         TestUtils.mustFail(result);
@@ -614,41 +617,41 @@ public class SemanticAnalysisTest2 {
         TestUtils.mustFail(result);
     }
 
-    /*@Test
-    public void VarargsTestError7() { // BAD
+    @Test
+    public void VarargsTestError7() { // GOOD
         // Site: ERROR@semantic, line 9, col 9: Expected method to receive 1 arguments, but got 3
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/VarargsTestError7.jmm"));
         TestUtils.mustFail(result);
-    }*/
+    }
 
-    /*@Test
-    public void VarargsTestError8() { // BAD
+    @Test
+    public void VarargsTestError8() { // GOOD
         // Site: Não dá erro, mas devia
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/VarargsTestError8.jmm"));
         TestUtils.mustFail(result);
     }
 
     @Test
-    public void VarargsTestError9() { // BAD
+    public void VarargsTestError9() { // GOOD
         // Site: ERROR@semantic, line 8, col 9: Argument with index 2 with type incompatible (Type [name=boolean, isArray=false]) of parameter type (Type [name=int, isArray=false])
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/VarargsTestError9.jmm"));
         TestUtils.mustFail(result);
     }
 
     @Test
-    public void VarargsTestError10() { // BAD
+    public void VarargsTestError10() { // GOOD
         // Site: Não dá erro, mas devia
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/VarargsTestError10.jmm"));
         TestUtils.mustFail(result);
-    }*/
+    }
 
     // ----- Parsing Errors -------------------------------------------------------------
 
-    /*@Test
-    public void error() { // BAD
+    @Test
+    public void error() { // GOOD
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/parsingerrors/error.jmm"));
         TestUtils.mustFail(result);
-    }*/
+    }
 
     @Test
     public void syntatic_Main() { // GOOD

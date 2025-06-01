@@ -23,6 +23,32 @@ public class MethodCallVerificationVisitor extends AnalysisVisitor {
         addVisit(Kind.IDENTIFIER, this::visitVarRefExpr);
         addVisit(Kind.METHOD_CALL, this::visitMethodCallExpr);
         addVisit(Kind.ARRAY_ACCESS, this::visitArrayAccessExpr);
+        addVisit(Kind.IMPORT_DECL, this::visitImportDecl);
+        addVisit(Kind.THIS_REFERENCE, this::visitThisReference);
+    }
+
+    private Void visitThisReference(JmmNode thisRef, SymbolTable table) {
+        // Check if 'this' is used in a static method
+        // go back to method declaration to check if it is main
+        String a = thisRef.getAttributes().toString();
+        JmmNode current = thisRef;
+        while (current != null && !current.getKind().equals("MethodDecl")) {
+            current = current.getParent();
+        }
+        if (current.get("isMain").equals("true")) {
+            addReport(newError(thisRef, "Found 'this' inside static method"));
+        }
+        return null;
+    }
+
+
+    private Void visitImportDecl(JmmNode methodNode, SymbolTable table) {
+        TypeUtils typeUtils = new TypeUtils(table);
+        if(typeUtils.hasDoubleImports()){
+            addReport(newError(methodNode, "Double import with same name detected."));
+            return null;
+        }
+        return null;
     }
 
     /**
@@ -83,6 +109,8 @@ public class MethodCallVerificationVisitor extends AnalysisVisitor {
             JmmNode identifierNode = methodCallExpr.getChildren().getFirst();
 
             if (identifierNode.getKind().equals(Kind.THIS_REFERENCE.getNodeName())) {
+                methodName = methodCallExpr.get("name");
+            } else if (methodCallExpr.hasAttribute("name")) {
                 methodName = methodCallExpr.get("name");
             } else if (identifierNode.hasAttribute("name")) {
                 methodName = identifierNode.get("name");
@@ -305,9 +333,10 @@ public class MethodCallVerificationVisitor extends AnalysisVisitor {
      * This function checks if a given variable is declared in the current method’s scope (local variables), in the class (fields), or in any imported classes.
      */
     private boolean isDeclared(String varName, SymbolTable table) {
+        TypeUtils typeUtils = new TypeUtils(table);
         return table.getLocalVariables(currentMethod).stream().anyMatch(var -> var.getName().equals(varName)) ||
                 table.getParameters(currentMethod).stream().anyMatch(var -> var.getName().equals(varName)) ||
                 table.getFields().stream().anyMatch(field -> field.getName().equals(varName)) ||
-                table.getImports().stream().anyMatch(imported -> imported.contains(varName));
+                typeUtils.isImported(varName);
     }
 }

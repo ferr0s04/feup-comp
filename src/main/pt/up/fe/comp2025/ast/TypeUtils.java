@@ -60,9 +60,22 @@ public class TypeUtils {
     public boolean isImported(String name) {
         var imports = table.getImports();
         for (var i = 0; i < imports.size(); i++) {
-            var splited = imports.get(i).split("\\.");
+            var splited = imports.get(i).split("\\,");
             var last = splited[splited.length - 1];
             if (last.equals(name)) { return true; }
+        }
+        return false;
+    }
+
+    public boolean hasDoubleImports() {
+        var imports = table.getImports();
+        var seen = new java.util.HashSet<String>();
+        for (var i = 0; i < imports.size(); i++) {
+            var splited = imports.get(i).split("\\,");
+            var last = splited[splited.length - 1];
+            if (!seen.add(last)) {
+                return true;
+            }
         }
         return false;
     }

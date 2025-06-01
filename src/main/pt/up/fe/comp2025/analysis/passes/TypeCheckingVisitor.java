@@ -9,8 +9,10 @@ import pt.up.fe.comp2025.ast.TypeUtils;
 import pt.up.fe.comp.jmm.analysis.table.Type;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 import java.util.HashSet;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class TypeCheckingVisitor extends AnalysisVisitor {
@@ -437,13 +439,18 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
         }
 
         // Count return statements
-        int returnCount = 0;
+        int returnCount = countReturnStatements(methodDecl);
+
+        JmmNode lastStatement = getLastStatement(methodDecl);
+
+        if ((!methodDecl.get("isMain").equals("true")) && (lastStatement == null || !lastStatement.getKind().equals("ReturnStmt"))) {
+            addReport(newError(methodDecl, "The last statement in a method must be a return."));
+            return null;
+        }
 
         // Look for return statements
         for (JmmNode child : methodDecl.getChildren()) {
             if (child.getKind().equals(Kind.RETURN_STMT.getNodeName())) {
-                returnCount++;
-
                 // Check if there's a return expression
                 if (child.getNumChildren() > 0) {
                     JmmNode returnExpr = child.getChild(0);
@@ -568,6 +575,46 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
 
         return null;
     }
+
+    private int countReturnStatements(JmmNode node) {
+        int count = 0;
+        if (node.getKind().equals(Kind.RETURN_STMT.getNodeName())) {
+            count++;
+        }
+        for (JmmNode child : node.getChildren()) {
+            count += countReturnStatements(child);
+        }
+        return count;
+    }
+
+    private JmmNode getLastStatement(JmmNode methodDecl) {
+        // Assuming methodDecl has a child (like "Block") or directly contains statements
+        List<JmmNode> children = methodDecl.getChildren();
+
+        // Optional: if your structure has a Block node wrapping all statements
+        for (JmmNode child : children) {
+            if (child.getKind().equals("Block")) {
+                List<JmmNode> blockStatements = child.getChildren();
+                if (!blockStatements.isEmpty()) {
+                    return blockStatements.get(blockStatements.size() - 1);
+                } else {
+                    return null;
+                }
+            }
+        }
+
+        // If statements are direct children of methodDecl
+        List<JmmNode> statements = children.stream()
+                .filter(node -> node.getKind().endsWith("Stmt")) // crude filter; adjust as needed
+                .collect(Collectors.toList());
+
+        if (statements.isEmpty()) {
+            return null;
+        }
+
+        return statements.get(statements.size() - 1);
+    }
+
 
 
     /**

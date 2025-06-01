@@ -178,6 +178,7 @@ public class SemanticAnalysisTest {
     public void addition() {
         var result = TestUtils
                 .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/Addition.jmm"));
+        System.out.println(result.getRootNode().toTree());
         TestUtils.noErrors(result);
     }
 
