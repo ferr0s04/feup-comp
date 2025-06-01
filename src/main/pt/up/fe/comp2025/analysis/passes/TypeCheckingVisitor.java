@@ -352,6 +352,14 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
             }
         }
 
+        // Check if paramNames and localVarNames dont have a common name
+        for (String paramName : paramNames) {
+            if (localVarNames.contains(paramName)) {
+                addReport(newError(methodDecl, "Parameter name '" + paramName + "' conflicts with local variable name."));
+                return null;
+            }
+        }
+
         boolean isMain = methodDecl.getBoolean("isMain", false);
 
 

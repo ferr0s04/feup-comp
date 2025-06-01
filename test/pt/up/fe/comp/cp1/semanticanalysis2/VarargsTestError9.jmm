@@ -1,0 +1,12 @@
+class aaa {
+
+     int somar(int n, int a, int b) {
+         return 0;
+     }
+
+     int teste() {
+         this.somar(2,3,true);
+         return 0;
+     }
+
+ }

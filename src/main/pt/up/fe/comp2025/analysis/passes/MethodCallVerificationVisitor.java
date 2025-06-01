@@ -156,6 +156,17 @@ public class MethodCallVerificationVisitor extends AnalysisVisitor {
                 }
             }
 
+            // Check in parameters
+            for (Symbol parameter : table.getParameters(currentMethod)) {
+                if (parameter.getName().equals(arrayVarName)) {
+                    foundVar = true;
+                    if (!parameter.getType().isArray()) {
+                        addReport(newError(arrayAccessExpr, "Variable '" + arrayVarName + "' is not an array."));
+                    }
+                    break;
+                }
+            }
+
             if (!foundVar) {
                 addReport(newError(arrayAccessExpr, "Array variable '" + arrayVarName + "' is not declared."));
                 return null;
@@ -196,6 +207,7 @@ public class MethodCallVerificationVisitor extends AnalysisVisitor {
      */
     private boolean isDeclared(String varName, SymbolTable table) {
         return table.getLocalVariables(currentMethod).stream().anyMatch(var -> var.getName().equals(varName)) ||
+                table.getParameters(currentMethod).stream().anyMatch(var -> var.getName().equals(varName)) ||
                 table.getFields().stream().anyMatch(field -> field.getName().equals(varName)) ||
                 table.getImports().stream().anyMatch(imported -> imported.contains(varName));
     }

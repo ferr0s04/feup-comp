@@ -112,12 +112,14 @@ public class SemanticAnalysisTest2 {
         TestUtils.mustFail(result);
     }
 
-    /*@Test
+    @Test
     public void DuplicatedTestError5() { // BAD - Parameters are also being saved as locals (duplication)
         // Site: ERROR@semantic, line 4, col 4: Local variable 'x' redefined a parameter in method x
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/DuplicatedTestError5.jmm"));
+        // Print AST
+        System.out.println("\n---\n" + result.getRootNode().toTree() + "\n---\n");
         TestUtils.mustFail(result);
-    }*/
+    }
 
     /*@Test
     public void DuplicatedTestError6() { // BAD
@@ -490,11 +492,24 @@ public class SemanticAnalysisTest2 {
         TestUtils.mustFail(result);
     }*/
 
-    // IN REVIEW - DO NOT UNCOMMENT
     /*@Test
     public void VarargsTestError8() { // BAD
-        // Site:
+        // Site: Não dá erro, mas devia
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/VarargsTestError8.jmm"));
+        TestUtils.mustFail(result);
+    }
+
+    @Test
+    public void VarargsTestError9() { // BAD
+        // Site: ERROR@semantic, line 8, col 9: Argument with index 2 with type incompatible (Type [name=boolean, isArray=false]) of parameter type (Type [name=int, isArray=false])
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/VarargsTestError9.jmm"));
+        TestUtils.mustFail(result);
+    }
+
+    @Test
+    public void VarargsTestError10() { // BAD
+        // Site: Não dá erro, mas devia
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/VarargsTestError10.jmm"));
         TestUtils.mustFail(result);
     }*/
 

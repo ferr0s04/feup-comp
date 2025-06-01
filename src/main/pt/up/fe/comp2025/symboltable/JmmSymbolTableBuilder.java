@@ -123,7 +123,7 @@ public class JmmSymbolTableBuilder {
 
             // Add to symbol table maps
             parameters.put(methodName, paramList);
-            localVariables.put(methodName, allVars);
+            localVariables.put(methodName, localVars);
         } else {
 
         }
