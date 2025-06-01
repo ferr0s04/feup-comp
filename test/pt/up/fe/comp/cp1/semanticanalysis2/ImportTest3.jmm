@@ -1,0 +1,12 @@
+import A.b;
+import A.c;
+
+class Test {
+
+    int test() {
+        int a;
+        a = c.func();
+        a = b.func();
+        return a;
+    }
+}

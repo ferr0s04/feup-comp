@@ -1,0 +1,8 @@
+class main {
+
+    public static void main(String[] args) {
+        int result;
+        result = 1 + 2 * 3 - 4 / 5;
+    }
+
+}

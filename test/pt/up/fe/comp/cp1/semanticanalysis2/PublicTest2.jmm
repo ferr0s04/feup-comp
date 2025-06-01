@@ -1,0 +1,5 @@
+class ClasseValida {
+    int metodoB(int o) {
+        return 1;
+    }
+}

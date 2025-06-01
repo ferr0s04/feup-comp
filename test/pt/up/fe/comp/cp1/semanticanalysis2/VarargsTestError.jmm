@@ -1,0 +1,3 @@
+class TesteVarargs {
+    int... valores;  // ERRO: campo não pode ser varargs
+}

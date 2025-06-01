@@ -1,0 +1,13 @@
+class Test {
+
+    int test() {
+        int b;
+        b = 0;
+        if (b < 2) {
+
+        } else {
+
+        }
+        return b;
+    }
+}

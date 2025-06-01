@@ -1,0 +1,10 @@
+class ClasseValida { // nao pode ter this num static method
+    public static void main(String[] args) {
+        int a;
+        a = this.metodoB(this);
+    }
+
+    int metodoB(ClasseValida obj) {
+        return 1;
+    }
+}

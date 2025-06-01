@@ -1,0 +1,4 @@
+class TesteVarargs {
+    int[] valores;   // OK: array normal
+    int... valores2; // ERRO: campo varargs não permitido
+}

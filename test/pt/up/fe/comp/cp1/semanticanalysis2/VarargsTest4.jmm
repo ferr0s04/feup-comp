@@ -1,0 +1,11 @@
+class TesteVarargs {
+    int imprimir(int... numeros) {  // OK
+        return 0;
+    }
+
+    int teste() {
+        this.imprimir(1, 2, 3);  // OK: 3 argumentos
+        this.imprimir();          // OK: 0 argumentos
+        return 0;
+    }
+}

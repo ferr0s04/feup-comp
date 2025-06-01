@@ -1,0 +1,14 @@
+class TesteArrayLiteral {
+
+    int metodoIntArray(int[] arr) {
+        return 1;
+    }
+
+    public static void main(String[] args) {
+        TesteArrayLiteral t;
+        int[] a;
+        a = new int[2];
+        a[2] = 3;
+
+    }
+}

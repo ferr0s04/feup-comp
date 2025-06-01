@@ -45,12 +45,14 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
             if (leftType.isArray() || rightType.isArray()) {
                 // Handle case where one of the operands is an array
                 addReport(newError(binaryExpr, "Cannot make this operations on an array."));
+                return null;
             } else {
                 // Both operands must be integers for arithmetic operations
                 if ((leftType.getName().equals("int") && rightType.getName().equals("int")) || (leftType.getName().equals("String") && rightType.getName().equals("String"))){
                     // good
                 } else {
                     addReport(newError(binaryExpr, "Arithmetic operations require integer operands."));
+                    return null;
                 }
             }
         } else if (op.matches("[+*/-]|(\\+=|-=|\\*=|/=)|([<>]=)|[<>]")) { // For all this both left and right have to be int
@@ -58,10 +60,12 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
             if (leftType.isArray() || rightType.isArray()) {
                 // Handle case where one of the operands is an array
                 addReport(newError(binaryExpr, "Cannot make this operations on an array."));
+                return null;
             } else {
                 // Both operands must be integers for arithmetic operations
                 if (!leftType.getName().equals("int") || !rightType.getName().equals("int")) {
                     addReport(newError(binaryExpr, "Arithmetic operations require integer operands."));
+                    return null;
                 }
             }
 
@@ -69,11 +73,13 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
 
             if (!leftType.getName().equals(rightType.getName())) {
                 addReport(newError(binaryExpr, "Operators require operands of the same type."));
+                return null;
             }
 
         } else if (op.equals("&&") || op.equals("||")) { // Both left and right have to be boolean
             if (!leftType.getName().equals("boolean") || !rightType.getName().equals("boolean")) {
                 addReport(newError(binaryExpr, "&& and || require boolean operands."));
+                return null;
             }
         }
 
@@ -174,11 +180,13 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
                     // Handle primitive type mismatch
                     if (varType.getName().equals("boolean") && assignedType.getName().equals("int")) {
                         addReport(newError(stmt, "Error: Cannot assign an integer to a boolean."));
+                        return null;
                     } else if (assignedType.getName().equals("length") && varType.getName().equals("int")) {
                         // Nada, está tudo fixolas
                     } else {
                         addReport(newError(stmt, "Type mismatch: cannot assign "
                                 + assignedType.getName() + " to " + varType.getName() + "."));
+                        return null;
                     }
                 }
             }
@@ -192,6 +200,7 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
 
             if (conditionType == null || (!conditionType.isArray() && !conditionType.getName().equals("boolean"))) {
                 addReport(newError(stmt, "Conditional expressions must return a boolean."));
+                return null;
             }
         }
 
@@ -202,6 +211,7 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
             // Ensure the condition is boolean
             if (conditionType == null || !conditionType.getName().equals("boolean")) {
                 addReport(newError(stmt, "While condition must be of boolean type."));
+                return null;
             }
         }
 
@@ -302,6 +312,7 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
 
         if (varType == null) {
             addReport(newError(primaryExpr, "Variable '" + id + "' is not declared."));
+            return null;
         }
 
         return null;
@@ -321,6 +332,7 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
         for (String name : table.getMethods()) {
             if (!methodNames.add(name)) {
                 addReport(newError(methodDecl, "Duplicate method name: " + name));
+                return null;
             }
         }
 
@@ -328,6 +340,7 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
         for (Symbol param : table.getParameters(methodName)) {
             if (!paramNames.add(param.getName())) {
                 addReport(newError(methodDecl, "Duplicate parameter name: " + param.getName()));
+                return null;
             }
         }
 
@@ -335,6 +348,7 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
         for (Symbol local : table.getLocalVariables(methodName)) {
             if (!localVarNames.add(local.getName())) {
                 addReport(newError(methodDecl, "Duplicate local variable name: " + local.getName()));
+                return null;
             }
         }
 
@@ -344,16 +358,19 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
         if (isMain) {
             if(!methodName.equals("main")){ // Verificar que se chama Main
                 addReport(newError(methodDecl, "Static void needs to be named main."));
+                return null;
             }
             // Verificar que String[] args
             if ((!methodDecl.get("string").equals("String")) || (!methodDecl.get("args").equals("args"))) {
                 addReport(newError(methodDecl, "Static void needs to have String[] args."));
+                return null;
             }
 
             // Verificar que não existe nenhum return startement
             for (JmmNode child : methodDecl.getChildren()) {
                 if (child.getKind().equals(Kind.RETURN_STMT.getNodeName())) {
                     addReport(newError(child, "Static void main cannot have a return statement."));
+                    return null;
                 }
             }
 
@@ -377,6 +394,7 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
                 // report on the PARAM node (you could also get line/col from typeNode)
                 addReport(newError(paramNode,
                         "Varargs parameter must be the last parameter in the list."));
+                return null;
             }
         }
 
@@ -455,9 +473,11 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
                                 if (returnType.isArray()) {
                                     addReport(newError(returnExpr, "Cannot return non-array type " + exprType.getName() +
                                             " where array type " + returnType.getName() + "[] is expected."));
+                                    return null;
                                 } else {
                                     addReport(newError(returnExpr, "Cannot return array type " + exprType.getName() +
                                             "[] where non-array type " + returnType.getName() + " is expected."));
+                                    return null;
                                 }
                             } else if (!returnType.equals(exprType)) {
                                 boolean bothAreClasses = isNotPrimitive(returnType) && isNotPrimitive(exprType);
@@ -466,11 +486,13 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
                                         addReport(newError(returnExpr, "Incompatible return type: expected "
                                                 + returnType.getName() + (returnType.isArray() ? "[]" : "")
                                                 + " but found " + exprType.getName() + (exprType.isArray() ? "[]" : "") + "."));
+                                        return null;
                                     }
                                 } else {
                                     addReport(newError(returnExpr, "Incompatible return type: expected "
                                             + returnType.getName() + (returnType.isArray() ? "[]" : "")
                                             + " but found " + exprType.getName() + (exprType.isArray() ? "[]" : "") + "."));
+                                    return null;
                                 }
                             }
                         }
@@ -481,18 +503,21 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
                         }
                         // Otherwise report an error
                         addReport(newError(returnExpr, "Cannot determine type of expression"));
+                        return null;
                     }
                 } else if (!returnType.getName().equals("void")) {
                     // Return statement with no expression, but method requires a return value
                     addReport(newError(child, "Missing return value: method " + methodName +
                             " must return a value of type " + returnType.getName() +
                             (returnType.isArray() ? "[]" : "")));
+                    return null;
                 }
             }
         }
 
         if (returnCount > 1) {
             addReport(newError(methodDecl, "Cannot have more than one return statement."));
+            return null;
         }
 
         // Check if a non-void method is missing a return statement
@@ -500,6 +525,7 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
             addReport(newError(methodDecl, "Missing return statement: method " + methodName +
                     " must return a value of type " + returnType.getName() +
                     (returnType.isArray() ? "[]" : "")));
+            return null;
         }
 
         return null;
@@ -611,6 +637,7 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
 
         if (firstElementType == null) {
             addReport(newError(expr, "Type of first element of literal array unknown."));
+            return null;
         }
 
         for (int i = 1; i < expr.getChildren().size(); i++) {
@@ -619,6 +646,7 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
 
             if (!elementType.equals(firstElementType)) {
                 addReport(newError(element, "Array literal element has incompatible type."));
+                return null;
             }
         }
         return null;
@@ -650,6 +678,7 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
         if (op.equals("++") || op.equals("--")) {
             if (!operandType.getName().equals("int")) {
                 addReport(newError(unaryExpr, "Increment/decrement operators require integer operands."));
+                return null;
             }
         } else {
             addReport(newError(unaryExpr, "Unknown unary operator: " + op));
@@ -675,12 +704,8 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
         }
 
         // Check if the target type is array or String
-        if (targetType.isArray()) {
+        if ((targetType.isArray()) || (targetType.getName().equals("String"))) {
             // This is valid - arrays have .length property
-            return null;
-        } else if (targetType.getName().equals("String")) {
-            // This is valid - String has .length() method
-            return null;
         } else {
             // Invalid type for length operation
             addReport(newError(lengthExpr, "Length operation is only valid for arrays and Strings, but got " +

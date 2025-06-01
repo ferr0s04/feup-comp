@@ -1,0 +1,8 @@
+class TestParams {
+
+    int test() {
+        int a;
+        a = this.expectInt(1);
+        return a;
+    }
+}

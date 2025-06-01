@@ -1,0 +1,9 @@
+class TesteOverload {
+    int metodo(int a) {
+        return 0;
+    }
+
+    int metodo(boolean a) {
+        return 1;
+    }
+}

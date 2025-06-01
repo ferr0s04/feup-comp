@@ -83,6 +83,7 @@ public class MethodCallVerificationVisitor extends AnalysisVisitor {
 
             if (isNotDeclaredMethod(methodName, table)) {
                 addReport(newError(methodCallExpr, "Method '" + methodName + "' is not declared or accessible."));
+                return null;
             }
         } else {
             // Method call with receiver and/or arguments
@@ -108,6 +109,7 @@ public class MethodCallVerificationVisitor extends AnalysisVisitor {
             // Verify if the method is declared
             if (isNotDeclaredMethod(methodName, table)) {
                 addReport(newError(methodCallExpr, "Method '" + methodName + "' is not declared or accessible."));
+                return null;
             }
         }
 
@@ -128,12 +130,14 @@ public class MethodCallVerificationVisitor extends AnalysisVisitor {
         Type indexType = typeUtils.getExprType(indexExpr);
         if (!indexType.getName().equals("int")) {
             addReport(newError(arrayAccessExpr, "Array index must be of type 'int'"));
+            return null;
         }
 
         // Check if array variable is declared and is of array type
         Type arrayExpressionType = typeUtils.getExprType(arrayExpr);
         if (!arrayExpressionType.isArray()) {
             addReport(newError(arrayAccessExpr, "Cannot access an index on a non-array type"));
+            return null;
         }
 
         // For the case where array is a variable
@@ -154,6 +158,7 @@ public class MethodCallVerificationVisitor extends AnalysisVisitor {
 
             if (!foundVar) {
                 addReport(newError(arrayAccessExpr, "Array variable '" + arrayVarName + "' is not declared."));
+                return null;
             }
         }
 

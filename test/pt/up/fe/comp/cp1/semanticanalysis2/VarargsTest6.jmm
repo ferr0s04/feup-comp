@@ -1,0 +1,18 @@
+class aaa {
+
+    int somar(int... numeros) {
+        int total;
+        total = 0;
+        return 0;
+    }
+
+    int teste() {
+        int[] a;
+        a = [2,3,4];
+        this.somar(new int[2]);
+        this.somar([2,3,4]);
+        this.somar(a);
+        return 0;
+    }
+
+}

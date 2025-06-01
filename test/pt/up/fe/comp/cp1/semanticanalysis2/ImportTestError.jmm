@@ -1,0 +1,9 @@
+import A.b;
+class Test {
+
+    int test() {
+        int a;
+        a = A.func();
+        return a;
+    }
+}

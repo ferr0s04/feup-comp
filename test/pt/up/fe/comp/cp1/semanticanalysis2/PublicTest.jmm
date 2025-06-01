@@ -1,0 +1,5 @@
+class ClasseValida {
+    public int metodoB(ClasseValida obj) {
+        return 1;
+    }
+}

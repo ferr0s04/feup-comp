@@ -1,0 +1,12 @@
+import x;
+import x.y;
+
+class TesteVariaveis {
+    int y;
+    int x(int x) {
+        int y;
+        return 0;
+    }
+
+
+}

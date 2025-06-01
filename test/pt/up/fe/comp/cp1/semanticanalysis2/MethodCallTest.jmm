@@ -1,0 +1,11 @@
+class TestSameClass {
+    int foo() {
+        return 1;
+    }
+
+    int bar() {
+        int a;
+        a = this.foo();
+        return a + 2;
+    }
+}

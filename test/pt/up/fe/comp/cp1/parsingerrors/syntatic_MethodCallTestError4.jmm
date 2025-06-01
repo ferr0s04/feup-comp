@@ -1,0 +1,12 @@
+class TestParams {
+    int expectInt(int x) {
+        return 1;
+    }
+
+    int test() {
+        int a;
+        a = this.expectInt(1);
+        a = expectInt(1);
+        return a;
+    }
+}

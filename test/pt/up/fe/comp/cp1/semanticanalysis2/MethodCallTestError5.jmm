@@ -1,0 +1,13 @@
+class Test {
+
+    public static void main(String[] args) {
+        int result;
+        result = this.test();
+    }
+
+    int test() {
+        int a;
+        a = 1;
+        return a;
+    }
+}

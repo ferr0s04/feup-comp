@@ -1,0 +1,12 @@
+class TesteVarargsMetodo {
+
+    int soma(int... numeros) {
+        int n;
+        int i;
+        int total;
+        while (n < numeros.length){
+            total = total + n;
+        }
+        return 1;
+    }
+}

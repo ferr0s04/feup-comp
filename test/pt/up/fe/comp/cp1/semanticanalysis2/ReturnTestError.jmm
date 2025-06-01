@@ -1,0 +1,13 @@
+class Test { // Não pode haver mais do que 1 return
+
+    int test() {
+        int b;
+        b = 0;
+        if (b < 2) {
+            return 1;
+        } else {
+           return 2;
+        }
+        return 0;
+    }
+}

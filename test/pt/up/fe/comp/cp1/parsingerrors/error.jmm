@@ -1,0 +1,10 @@
+class Test {
+    int expectInt(int x) {
+        return 1;
+    }
+
+    int test() {
+        int a = this.expectInt(1);
+        return a;
+    }
+}

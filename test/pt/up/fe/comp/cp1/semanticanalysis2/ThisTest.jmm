@@ -1,0 +1,11 @@
+class ClasseValida {
+    int metodoA() {
+        int a;
+        a = this.metodoB(this);
+        return a;
+    }
+
+    int metodoB(ClasseValida obj) {
+        return 1;
+    }
+}

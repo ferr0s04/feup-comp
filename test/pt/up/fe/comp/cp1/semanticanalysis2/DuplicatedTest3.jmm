@@ -1,0 +1,11 @@
+import x;
+
+class TesteVariaveis {
+    int x;
+    int x() {
+        int x;
+        return 0;
+    }
+
+
+}

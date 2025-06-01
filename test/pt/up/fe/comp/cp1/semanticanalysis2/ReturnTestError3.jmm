@@ -1,0 +1,9 @@
+class Test { // return tem de ser sempre no final
+
+    int test() {
+        int b;
+        b = 0;
+        return b;
+        b = 1;
+    }
+}

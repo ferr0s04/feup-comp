@@ -1,0 +1,4 @@
+class TesteFields {
+    int x;
+    boolean x;
+}

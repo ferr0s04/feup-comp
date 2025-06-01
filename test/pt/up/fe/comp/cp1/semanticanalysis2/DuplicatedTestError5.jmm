@@ -1,0 +1,10 @@
+import x;
+
+class TesteVariaveis {
+    int x(int x) { // Local variable 'x' redefined a parameter in method x
+        int x;
+        return 0;
+    }
+
+
+}

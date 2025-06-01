@@ -17,7 +17,6 @@ IF : 'if';
 ELSE : 'else';
 WHILE : 'while';
 FOR : 'for';
-ELSEIF : 'else if';
 NEW : 'new';
 THIS : 'this';
 
@@ -78,7 +77,7 @@ param
 
 stmt
     : expr ';'                        # ExprStmt
-    | 'return' expr? ';'              # ReturnStmt
+    | 'return' expr ';'               # ReturnStmt
     | '{' (stmt)* '}'                 # BlockStmt
     | IF '(' expr ')' stmt ELSE stmt  # IfStmt
     | FOR '(' stmt expr ';' expr ')' stmt  # ForStmt

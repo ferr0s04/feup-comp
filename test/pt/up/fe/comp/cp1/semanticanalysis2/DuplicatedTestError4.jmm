@@ -1,0 +1,7 @@
+class TesteVariaveis {
+    int exemplo() {
+        int x;
+        int x;
+        return 0;
+    }
+}

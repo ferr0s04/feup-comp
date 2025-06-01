@@ -1,0 +1,7 @@
+class TestUndefined {
+    int test() {
+        int a;
+        a.undefinedMethod();
+        return 0;
+    }
+}

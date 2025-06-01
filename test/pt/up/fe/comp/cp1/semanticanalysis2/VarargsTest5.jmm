@@ -1,0 +1,14 @@
+class aaa {
+
+    int somar(int[] numeros) {
+        int total;
+        total = 0;
+        return 0;
+    }
+
+    int teste() {
+        this.somar(new int[2]);
+        return 0;
+    }
+
+}

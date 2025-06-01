@@ -1,0 +1,9 @@
+import Parent;
+
+class Child extends Parent {
+    int childMethod() {
+        int a;
+        a = Parent.parentMethod();
+        return a;
+    }
+}

@@ -1,0 +1,9 @@
+class Teste {
+    int metodo() {
+        return 0;
+    }
+
+    boolean metodo() {
+        return true;
+    }
+}

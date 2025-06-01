@@ -1,0 +1,9 @@
+class TesteShadowing {
+    int x;
+
+    int metodo() {
+        int x;
+        x = 10;
+        return 0;
+    }
+}

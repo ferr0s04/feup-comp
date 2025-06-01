@@ -1,0 +1,6 @@
+class TestUndefined {
+    int test() {
+        this.undefinedMethod();
+        return 0;
+    }
+}
