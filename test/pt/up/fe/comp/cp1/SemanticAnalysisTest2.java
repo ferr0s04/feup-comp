@@ -20,11 +20,11 @@ public class SemanticAnalysisTest2 {
 
     // ----- ArrayTest -------------------------------------------------------------
 
-    /*@Test
-    public void ArrayTest() { // BAD
+    @Test
+    public void ArrayTest() { // GOOD
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/ArrayTest.jmm"));
         TestUtils.noErrors(result);
-    }*/
+    }
 
     @Test
     public void ArrayTest2() { // GOOD
@@ -33,10 +33,8 @@ public class SemanticAnalysisTest2 {
     }
 
     @Test
-    public void ArrayTest3() { // BAD
+    public void ArrayTest3() { // GOOD
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/ArrayTest3.jmm"));
-        // Print AST
-        // System.out.println("\n---\n" + result.getRootNode().toTree() + "\n---\n");
         TestUtils.noErrors(result);
     }
 
@@ -58,12 +56,12 @@ public class SemanticAnalysisTest2 {
         TestUtils.noErrors(result);
     }
 
-    /*@Test
-    public void ArrayTestError() { // BAD
+    @Test
+    public void ArrayTestError() { // GOOD
         // Site: ERROR@semantic, line 13, col 8: Argument with index 0 with type incompatible (Type [name=int, isArray=false]) of parameter type (Type [name=int, isArray=true])
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/ArrayTestError.jmm"));
         TestUtils.mustFail(result);
-    }*/
+    }
 
     @Test
     public void ArrayTestError2() { // GOOD
