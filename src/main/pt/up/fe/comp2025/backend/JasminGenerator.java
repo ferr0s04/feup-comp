@@ -77,7 +77,6 @@ public class JasminGenerator {
         generators.put(ArrayLengthInstruction.class, this::generateArrayLength);
     }
 
-
     private String apply(TreeNode node) {
 
         // Print the corresponding OLLIR code as a comment
@@ -85,7 +84,6 @@ public class JasminGenerator {
 
         return generators.apply(node);
     }
-
 
     public List<Report> getReports() {
         return reports;
@@ -101,7 +99,6 @@ public class JasminGenerator {
 
         return code;
     }
-
 
     private void preprocessLabels(Method method) {
         labelTargets.clear();
@@ -166,7 +163,6 @@ public class JasminGenerator {
         return code.toString();
     }
 
-
     private String generateMethod(Method method) {
         currentMethod = method;
         var code = new StringBuilder();
@@ -225,7 +221,6 @@ public class JasminGenerator {
         currentMethod = null;
         return code.toString();
     }
-
 
     private boolean isLabelTarget(Instruction inst) {
         return labelTargets.containsValue(inst);
@@ -376,7 +371,6 @@ public class JasminGenerator {
         return name.startsWith("temp") || name.equals("j"); // adapt to your naming
     }
 
-
     private String generateSingleOp(SingleOpInstruction singleOp) {
         return apply(singleOp.getSingleOperand());
     }
@@ -525,12 +519,12 @@ public class JasminGenerator {
         return "astore"; // Other types
     }
 
-
     private String generateBinaryOp(BinaryOpInstruction binaryOp) {
         var code = new StringBuilder();
 
         OperationType opType = binaryOp.getOperation().getOpType();
 
+        // Handle increment optimization
         if (opType == OperationType.ADD &&
                 binaryOp.getRightOperand() instanceof LiteralElement lit &&
                 lit.getLiteral().equals("1") &&
@@ -540,7 +534,7 @@ public class JasminGenerator {
             return "iinc " + reg.getVirtualReg() + " 1" + NL;
         }
 
-        // If it’s a standalone “compare → produce boolean 0/1” (e.g. “10 < 20”), do the full 0/1 sequence:
+        // Handle comparison operations
         if (opType == OperationType.LTH
                 || opType == OperationType.GTH
                 || opType == OperationType.LTE
@@ -548,48 +542,98 @@ public class JasminGenerator {
                 || opType == OperationType.EQ
                 || opType == OperationType.NEQ) {
 
-            // 1) Load left, then load right
-            code.append(apply(binaryOp.getLeftOperand()));
-            code.append(apply(binaryOp.getRightOperand()));
+            // Check for unary comparison case (compare with zero)
+            boolean isUnaryComparison = false;
+            Element valueOperand = null;
 
-            // 2) Pick the correct if_icmpXxx mnemonic
-            String compareInsn = switch (opType) {
-                case LTH  -> "if_icmplt";
-                case GTH  -> "if_icmpgt";
-                case LTE  -> "if_icmple";
-                case GTE  -> "if_icmpge";
-                case EQ   -> "if_icmpeq";
-                case NEQ  -> "if_icmpne";
-                default   -> throw new NotImplementedException("Unhandled compare: " + opType);
-            };
+            if (binaryOp.getRightOperand() instanceof LiteralElement lit && lit.getLiteral().equals("0")) {
+                isUnaryComparison = true;
+                valueOperand = binaryOp.getLeftOperand();
+            } else if (binaryOp.getLeftOperand() instanceof LiteralElement lit && lit.getLiteral().equals("0")) {
+                isUnaryComparison = true;
+                valueOperand = binaryOp.getRightOperand();
+                // Need to flip the comparison operator
+                opType = flipComparisonOperator(opType);
+            }
 
-            // 3) Generate two unique labels
-            int thisId = cmpCounter++;
-            String trueLabel = "j_true_" + thisId;
-            String endLabel  = "j_end_" + thisId;
+            if (isUnaryComparison) {
+                // Unary comparison case (compare with zero)
+                code.append(apply(valueOperand));
 
-            // 4) Emit compare → if_icmpXxx trueLabel
-            code.append(compareInsn)
-                    .append(" ")
-                    .append(trueLabel)
-                    .append(NL);
+                String compareInsn = switch (opType) {
+                    case LTH  -> "iflt";
+                    case GTH  -> "ifgt";
+                    case LTE  -> "ifle";
+                    case GTE  -> "ifge";
+                    case EQ   -> "ifeq";
+                    case NEQ  -> "ifne";
+                    default   -> throw new NotImplementedException("Unhandled unary compare: " + opType);
+                };
 
-            // 5) False‐path: push 0, then jump to endLabel
-            code.append("iconst_0").append(NL);
-            code.append("goto ").append(endLabel).append(NL);
+                // Generate two unique labels
+                int thisId = cmpCounter++;
+                String trueLabel = "j_true_" + thisId;
+                String endLabel  = "j_end_" + thisId;
 
-            // 6) True‐path label and push 1
-            code.append(trueLabel).append(":").append(NL);
-            code.append("iconst_1").append(NL);
+                // Emit compare → ifXxx trueLabel
+                code.append(compareInsn)
+                        .append(" ")
+                        .append(trueLabel)
+                        .append(NL);
 
-            // 7) End label
-            code.append(endLabel).append(":").append(NL);
+                // False‐path: push 0, then jump to endLabel
+                code.append("iconst_0").append(NL);
+                code.append("goto ").append(endLabel).append(NL);
+
+                // True‐path label and push 1
+                code.append(trueLabel).append(":").append(NL);
+                code.append("iconst_1").append(NL);
+
+                // End label
+                code.append(endLabel).append(":").append(NL);
+            } else {
+                // Binary comparison case (compare two values)
+                code.append(apply(binaryOp.getLeftOperand()));
+                code.append(apply(binaryOp.getRightOperand()));
+
+                String compareInsn = switch (opType) {
+                    case LTH  -> "if_icmplt";
+                    case GTH  -> "if_icmpgt";
+                    case LTE  -> "if_icmple";
+                    case GTE  -> "if_icmpge";
+                    case EQ   -> "if_icmpeq";
+                    case NEQ  -> "if_icmpne";
+                    default   -> throw new NotImplementedException("Unhandled binary compare: " + opType);
+                };
+
+                // Generate two unique labels
+                int thisId = cmpCounter++;
+                String trueLabel = "j_true_" + thisId;
+                String endLabel  = "j_end_" + thisId;
+
+                // Emit compare → if_icmpXxx trueLabel
+                code.append(compareInsn)
+                        .append(" ")
+                        .append(trueLabel)
+                        .append(NL);
+
+                // False‐path: push 0, then jump to endLabel
+                code.append("iconst_0").append(NL);
+                code.append("goto ").append(endLabel).append(NL);
+
+                // True‐path label and push 1
+                code.append(trueLabel).append(":").append(NL);
+                code.append("iconst_1").append(NL);
+
+                // End label
+                code.append(endLabel).append(":").append(NL);
+            }
 
             System.out.println("generateBinaryOp (compare) → Jasmin:\n" + code);
             return code.toString();
         }
 
-        // Standard arithmetic or bitwise:
+        // Standard arithmetic or bitwise operations:
         code.append(apply(binaryOp.getLeftOperand()));
         code.append(apply(binaryOp.getRightOperand()));
 
@@ -600,13 +644,23 @@ public class JasminGenerator {
             case DIV -> code.append("idiv");
             case AND -> code.append("iand");
             case OR  -> code.append("ior");
-            // We no longer reach a comparison case here because we handled them above
             default  -> throw new NotImplementedException("BinaryOp not supported: " + opType);
         }
 
         code.append(NL);
         System.out.println("generateBinaryOp (arith) → Jasmin:\n" + code);
         return code.toString();
+    }
+
+    // Helper method to flip comparison operators when operands are swapped
+    private OperationType flipComparisonOperator(OperationType opType) {
+        return switch (opType) {
+            case LTH -> OperationType.GTH;
+            case GTH -> OperationType.LTH;
+            case LTE -> OperationType.GTE;
+            case GTE -> OperationType.LTE;
+            default -> opType; // EQ and NEQ don't need to be flipped
+        };
     }
 
     private String generateReturn(ReturnInstruction returnInst) {
@@ -856,7 +910,6 @@ public class JasminGenerator {
         System.out.println("generateOpCond -> Jasmin code:\n" + code);
         return code.toString();
     }
-
 
     private String generateGoto(GotoInstruction gotoInst) {
         return "goto " + gotoInst.getLabel() + NL;
