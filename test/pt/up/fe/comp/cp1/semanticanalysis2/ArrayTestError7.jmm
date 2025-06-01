@@ -1,0 +1,9 @@
+class main {
+    String... a;
+
+    int nao() {
+
+        return 1;
+    }
+
+}

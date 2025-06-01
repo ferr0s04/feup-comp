@@ -50,24 +50,51 @@ varDecl
     | type name=ID op='[' op=']' ';'
     ;
 
-type locals[boolean isArray=false]
+type locals[boolean isArray=false, boolean isVarargs=false]
     : name=INT '[' ']' { $isArray = true; }
-    | name=INT '...' { $isArray = true; }
+    | name=INT '...' { $isArray = true; $isVarargs=true; }
     | name=INT
     | name=BOOLEAN
     | name=ID '[' ']' { $isArray = true; }
     | name=ID
     ;
 
-methodDecl locals[boolean isPublic=false, boolean isMain=false]
+staticVoidModifiers
+    : STATIC VOID      # StaticVoid
+    | STATIC           # StaticOnly
+    | VOID             # VoidOnly
+    ;
+
+
+methodDecl locals[boolean isPublic=false, boolean isMain=false, boolean isWrong=false]
     : (PUBLIC {$isPublic=true;})?
-      type name=ID
-      '(' (param (',' param)*)? ')'
-      '{' (varDecl)* (stmt)* '}'
+        type name=ID
+        '(' (param (',' param)*)? ')'
+        '{' (varDecl)* (stmt)* '}'
     | (PUBLIC {$isPublic=true; $isMain=true;})?
-      STATIC VOID name=ID
-      '(' string=ID '[' ']' args=ID ')'
-      '{' (varDecl)* (stmt)* '}'
+        STATIC VOID name=ID
+        '(' string=ID '[' ']' args=ID ')'
+        '{' (varDecl)* (stmt)* '}'
+    | (PUBLIC {$isPublic=true; $isMain=false;})? { $isWrong = true; }
+        staticVoidModifiers name=ID
+        '(' (param (',' param)*)? ')'
+        '{' (varDecl)* (stmt)* '}'
+    | (PUBLIC {$isPublic=true; $isMain=false;})? { $isWrong = true; }
+        STATIC type name=ID
+        '(' (param (',' param)*)? ')'
+        '{' (varDecl)* (stmt)* '}'
+    | (PUBLIC {$isPublic=true; $isMain=false;})? { $isWrong = true; }
+        staticVoidModifiers name=ID
+        '(' string=ID '[' ']' args=ID ')'
+        '{' (varDecl)* (stmt)* '}'
+    | (PUBLIC {$isPublic=true; $isMain=false;})? { $isWrong = true; }
+        STATIC? type name=ID
+        '(' string=ID '[' ']' args=ID ')'
+        '{' (varDecl)* (stmt)* '}'
+    | (PUBLIC {$isPublic=true; $isMain=true;})? { $isWrong = true; }
+        STATIC VOID name=ID
+        '(' string=ID '...' args=ID ')'
+        '{' (varDecl)* (stmt)* '}'
     ;
 
 

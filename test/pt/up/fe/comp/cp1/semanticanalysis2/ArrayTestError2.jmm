@@ -1,0 +1,8 @@
+class main {
+    String[] args;
+
+    int nao() {
+        return 1;
+    }
+
+}

@@ -50,12 +50,138 @@ public class SemanticAnalysisTest2 {
         TestUtils.noErrors(result);
     }
 
+    @Test
+    public void ArrayTest6() { // GOOD
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/ArrayTest6.jmm"));
+        TestUtils.noErrors(result);
+    }
+
     /*@Test
     public void ArrayTestError() { // BAD
         // Site: ERROR@semantic, line 13, col 8: Argument with index 0 with type incompatible (Type [name=int, isArray=false]) of parameter type (Type [name=int, isArray=true])
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/ArrayTestError.jmm"));
         TestUtils.mustFail(result);
     }*/
+
+    @Test
+    public void ArrayTestError2() { // GOOD
+        // Site:
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/ArrayTestError2.jmm"));
+        TestUtils.mustFail(result);
+    }
+
+    @Test
+    public void ArrayTestError3() { // GOOD
+        // Site:
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/ArrayTestError3.jmm"));
+        TestUtils.mustFail(result);
+    }
+
+    @Test
+    public void ArrayTestError4() { // GOOD
+        // Site:
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/ArrayTestError4.jmm"));
+        TestUtils.mustFail(result);
+    }
+
+    @Test
+    public void ArrayTestError5() { // GOOD
+        // Site:
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/ArrayTestError5.jmm"));
+        TestUtils.mustFail(result);
+    }
+
+    @Test
+    public void ArrayTestError6() { // GOOD
+        // Site:
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/ArrayTestError6.jmm"));
+        TestUtils.mustFail(result);
+    }
+
+    @Test
+    public void ArrayTestError7() { // GOOD
+        // Site:
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/ArrayTestError7.jmm"));
+        TestUtils.mustFail(result);
+    }
+
+    @Test
+    public void ArrayTestError8() { // GOOD
+        // Site:
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/ArrayTestError8.jmm"));
+        TestUtils.mustFail(result);
+    }
+
+    @Test
+    public void ArrayTestError9() { // GOOD
+        // Site:
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/ArrayTestError9.jmm"));
+        TestUtils.mustFail(result);
+    }
+
+    @Test
+    public void ArrayTestError10() { // GOOD
+        // Site:
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/ArrayTestError10.jmm"));
+        TestUtils.mustFail(result);
+    }
+
+    @Test
+    public void ArrayTestError11() { // GOOD
+        // Site:
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/ArrayTestError11.jmm"));
+        TestUtils.mustFail(result);
+    }
+
+    @Test
+    public void ArrayTestError12() { // GOOD
+        // Site:
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/ArrayTestError12.jmm"));
+        TestUtils.mustFail(result);
+    }
+
+
+    @Test
+    public void ArrayTestError13() { // GOOD
+        // Site:
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/ArrayTestError13.jmm"));
+        TestUtils.mustFail(result);
+    }
+
+    @Test
+    public void ArrayTestError14() { // GOOD
+        // Site:
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/ArrayTestError14.jmm"));
+        TestUtils.mustFail(result);
+    }
+
+    @Test
+    public void ArrayTestError15() { // GOOD
+        // Site:
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/ArrayTestError15.jmm"));
+        TestUtils.mustFail(result);
+    }
+
+    @Test
+    public void ArrayTestError16() { // GOOD
+        // Site:
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/ArrayTestError16.jmm"));
+        TestUtils.mustFail(result);
+    }
+
+    @Test
+    public void ArrayTestError17() { // GOOD
+        // Site:
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/ArrayTestError17.jmm"));
+        TestUtils.mustFail(result);
+    }
+
+    @Test
+    public void ArrayTestError18() { // GOOD
+        // Site:
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/ArrayTestError18.jmm"));
+        TestUtils.mustFail(result);
+    }
 
     // ----- DuplicatedTest -------------------------------------------------------------
 
@@ -193,11 +319,11 @@ public class SemanticAnalysisTest2 {
 
     // ----- MainTest -------------------------------------------------------------
 
-    /*@Test
-    public void MainTest() { // BAD - Main parameters not in parameters
+    @Test
+    public void MainTest() { // GOOD
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/MainTest.jmm"));
         TestUtils.noErrors(result);
-    }*/
+    }
 
     @Test
     public void MainTestError() { // GOOD
@@ -208,7 +334,7 @@ public class SemanticAnalysisTest2 {
     }
 
     @Test
-    public void MainTestError2() { // GOOD - não exatamente o mesmo erro, mas motivo correto e por principio funciona bem
+    public void MainTestError2() { // GOOD
         // Site: ERROR@semantic, line 3, col 4: Detected unsupported feature: static methods that are not the 'main' method.
         // Although the provided code might be valid in Java, this compiler does not support it because it is not required by the project specification.
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/MainTestError2.jmm"));
@@ -255,13 +381,13 @@ public class SemanticAnalysisTest2 {
         TestUtils.mustFail(result);
     }
 
-    /*@Test
+    @Test
     public void MainTestError8() { // BAD
         // Site: ERROR@semantic, line 3, col 12: Detected unsupported feature: arrays that are not 'int[]' or 'int...' outside of the first parameter of the main method.
         // Although the provided code might be valid in Java, this compiler does not support it because it is not required by the project specification.
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/MainTestError8.jmm"));
         TestUtils.mustFail(result);
-    }*/
+    }
 
     @Test
     public void MainTestError9() { // GOOD
@@ -446,19 +572,19 @@ public class SemanticAnalysisTest2 {
         TestUtils.noErrors(result);
     }
 
-    /*@Test
+    @Test
     public void VarargsTestError() { // BAD
         // Site: ERROR@semantic, line 2, col 4: Found varargs outside of method parameters
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/VarargsTestError.jmm"));
         TestUtils.mustFail(result);
-    }*/
+    }
 
-    /*@Test
+    @Test
     public void VarargsTestError2() { // BAD
         // Site: ERROR@semantic, line 3, col 4: Found varargs outside of method parameters
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/VarargsTestError2.jmm"));
         TestUtils.mustFail(result);
-    }*/
+    }
 
     @Test
     public void VarargsTestError3() { // GOOD
@@ -467,19 +593,19 @@ public class SemanticAnalysisTest2 {
         TestUtils.mustFail(result);
     }
 
-    /*@Test
+    @Test
     public void VarargsTestError4() { // BAD
         // Site: ERROR@semantic, line 3, col 8: Found varargs outside of method parameters
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/VarargsTestError4.jmm"));
         TestUtils.mustFail(result);
-    }*/
+    }
 
-    /*@Test
+    @Test
     public void VarargsTestError5() { // BAD
         // Site: ERROR@semantic, line 2, col 4: Found varargs outside of method parameters
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/VarargsTestError5.jmm"));
         TestUtils.mustFail(result);
-    }*/
+    }
 
     @Test
     public void VarargsTestError6() { // GOOD
