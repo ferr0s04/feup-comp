@@ -132,12 +132,6 @@ public class JasminGenerator {
         }
     }
 
-    private Instruction getNextInstruction(Method method, int currentIndex) {
-        return currentIndex + 1 < method.getInstructions().size()
-                ? method.getInstructions().get(currentIndex + 1)
-                : null;
-    }
-
     private String generateClassUnit(ClassUnit classUnit) {
         var code = new StringBuilder();
 
@@ -190,7 +184,7 @@ public class JasminGenerator {
         // Special handling for main method
         if (methodName.equals("main") && method.isStaticMethod() &&
                 method.getParams().size() == 1 &&
-                method.getParams().get(0).getType().toString().equals("STRING")) {
+                method.getParams().getFirst().getType().toString().equals("STRING")) {
             modifier = "public static ";
         }
 
@@ -333,7 +327,7 @@ public class JasminGenerator {
         // Handle array creation if needed
         if (assign.getRhs() instanceof NewInstruction newInst &&
                 newInst.getReturnType() instanceof ArrayType) {
-            code.append("ldc ").append(5).append(NL);
+            code.append("ldc ").append(5).append(NL); // Default array size
         }
 
         // Generate right-hand side
@@ -347,24 +341,33 @@ public class JasminGenerator {
         code.append(rhsCode);
 
         var lhs = assign.getDest();
-        if (!(lhs instanceof Operand operand)) {
-            throw new NotImplementedException(lhs.getClass());
-        }
 
-        var reg = currentMethod.getVarTable().get(operand.getName());
-        String storePrefix = getStorePrefix(operand.getType());
-        int tempReg = 3;
-        if (isTemporary(operand.getName())) {
-            code.append(getStorePrefix(operand.getType()))
-                    .append("_").append(tempReg).append(NL);
-        } else {
-            if (reg.getVirtualReg() > 3) {
-                code.append(storePrefix).append(" ").append(reg.getVirtualReg()).append(NL);
+        // Handle array store operation
+        if (lhs instanceof ArrayOperand arrayOperand) {
+            // Stack should be: array, index, value
+            code.append(apply(arrayOperand.getIndexOperands().getFirst())); // Load index
+            code.append("iastore").append(NL); // Store value in array[index]
+            return code.toString();
+        }
+        // Handle regular operand
+        else if (lhs instanceof Operand operand) {
+            var reg = currentMethod.getVarTable().get(operand.getName());
+            String storePrefix = getStorePrefix(operand.getType());
+            int tempReg = 3;
+            if (isTemporary(operand.getName())) {
+                code.append(getStorePrefix(operand.getType()))
+                        .append("_").append(tempReg).append(NL);
             } else {
-                code.append(storePrefix).append("_").append(reg.getVirtualReg()).append(NL);
+                if (reg.getVirtualReg() > 3) {
+                    code.append(storePrefix).append(" ").append(reg.getVirtualReg()).append(NL);
+                } else {
+                    code.append(storePrefix).append("_").append(reg.getVirtualReg()).append(NL);
+                }
             }
         }
-
+        else {
+            throw new NotImplementedException(lhs.getClass());
+        }
 
         return code.toString();
     }
@@ -422,7 +425,48 @@ public class JasminGenerator {
             return "aload_0" + NL;
         }
 
-        // Lookup the descriptor
+        // Handle array load operation
+        if (operand instanceof ArrayOperand arrayOperand) {
+            var code = new StringBuilder();
+            // Load array reference (the base array variable)
+            String arrayVarName = arrayOperand.getName();
+            Descriptor arrayReg = currentMethod.getVarTable().get(arrayVarName);
+            if (arrayReg == null) {
+                throw new RuntimeException("Array variable '" + arrayVarName + "' not found in varTable.");
+            }
+
+            // Load array reference - use fixed slot for temporaries
+            int arrayRegNum = isTemporary(arrayVarName) ? 3 : arrayReg.getVirtualReg();
+            if (arrayRegNum > 3) {
+                code.append("aload ").append(arrayRegNum).append(NL);
+            } else {
+                code.append("aload_").append(arrayRegNum).append(NL);
+            }
+
+            // Load index - use fixed slot for temporaries
+            Element indexElement = arrayOperand.getIndexOperands().getFirst();
+            if (indexElement instanceof Operand indexOperand) {
+                Descriptor indexReg = currentMethod.getVarTable().get(indexOperand.getName());
+                if (indexReg != null) {
+                    int indexRegNum = isTemporary(indexOperand.getName()) ? 3 : indexReg.getVirtualReg();
+                    if (indexRegNum > 3) {
+                        code.append("iload ").append(indexRegNum).append(NL);
+                    } else {
+                        code.append("iload_").append(indexRegNum).append(NL);
+                    }
+                } else {
+                    code.append(apply(indexElement));
+                }
+            } else {
+                code.append(apply(indexElement));
+            }
+
+            // Load value from array
+            code.append("iaload").append(NL);
+            return code.toString();
+        }
+
+        // Rest of the method with temporary variable handling
         Descriptor reg = currentMethod.getVarTable().get(operand.getName());
 
         if (reg == null) {
@@ -447,8 +491,8 @@ public class JasminGenerator {
             throw new RuntimeException("Variable '" + operand.getName() + "' not found in varTable.");
         }
 
-        // For local variables, ensure index is greater than 1 when dealing with arrays
-        int localIndex = reg.getVirtualReg();
+        // For local variables, use slot 3 for temporaries
+        int localIndex = isTemporary(operand.getName()) ? 3 : reg.getVirtualReg();
 
         if (localIndex > 3) {
             return getLoadPrefix(operand.getType()) + " " + localIndex + NL;
@@ -609,9 +653,7 @@ public class JasminGenerator {
     }
 
     private String generateInvokeSpecial(InvokeSpecialInstruction specialInst) {
-        return "aload_0" + NL +
-                // Call super constructor
-                "invokespecial java/lang/Object/<init>()V" + NL;
+        return "";
     }
 
     private String generateGetField(GetFieldInstruction getFieldInst) {
