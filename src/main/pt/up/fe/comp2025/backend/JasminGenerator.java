@@ -699,15 +699,36 @@ public class JasminGenerator {
         // New object
         else {
             String className = ((ClassType) newInst.getReturnType()).getName();
+            // Only emit 'new', let assignment handle storage
             code.append("new ").append(className).append(NL);
-            code.append("invokespecial ").append(className).append("/<init>()V").append(NL);
         }
         System.out.println("generateNew -> Jasmin code:\n" + code);
         return code.toString();
     }
 
     private String generateInvokeSpecial(InvokeSpecialInstruction specialInst) {
-        return "";
+        var code = new StringBuilder();
+        // Find the correct local variable index for the object
+        // The first operand is the object reference
+        Element obj = specialInst.getOperands().getFirst();
+        int regIndex = 1; // default fallback
+        if (obj instanceof Operand operand) {
+            Descriptor reg = currentMethod.getVarTable().get(operand.getName());
+            if (reg != null) {
+                regIndex = reg.getVirtualReg();
+            }
+        }
+        String className = ((ClassType) specialInst.getOperands().getFirst().getType()).getName();
+        if (regIndex > 3) {
+            code.append("aload ").append(regIndex).append(NL);
+        } else {
+            code.append("aload_").append(regIndex).append(NL);
+        }
+        code.append("invokespecial ")
+                .append(className)
+                .append("/<init>()V")
+                .append(NL);
+        return code.toString();
     }
 
     private String generateGetField(GetFieldInstruction getFieldInst) {
@@ -941,3 +962,4 @@ public class JasminGenerator {
         return code.toString();
     }
 }
+
