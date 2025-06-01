@@ -177,15 +177,23 @@ public class JasminGenerator {
         currentMethod = method;
         var code = new StringBuilder();
 
-        // Build labels so that isLabelTarget(inst) / getLabelForInstruction(inst) still work
+        // Build labels
         preprocessLabels(method);
 
-        // ————— Emit method header exactly as before —————
+        // Emit method header
         var modifier = types.getModifier(method.getMethodAccessModifier());
         if (method.isStaticMethod()) {
             modifier += "static ";
         }
         var methodName = method.getMethodName();
+
+        // Special handling for main method
+        if (methodName.equals("main") && method.isStaticMethod() &&
+                method.getParams().size() == 1 &&
+                method.getParams().get(0).getType().toString().equals("STRING")) {
+            modifier = "public static ";
+        }
+
         var params = method.getParams().stream()
                 .map(p -> toJasminType(p.getType()))
                 .collect(Collectors.joining());
@@ -198,22 +206,19 @@ public class JasminGenerator {
                 .append(returnType)
                 .append(NL);
 
-        int stackLimit  = calculateStackLimit(method);
+        int stackLimit = calculateStackLimit(method);
         int localsLimit = calculateLocalsLimit(method);
         code.append(TAB).append(".limit stack ").append(stackLimit).append(NL);
         code.append(TAB).append(".limit locals ").append(localsLimit).append(NL);
 
-        // ————— Now walk the instruction list by index —————
+        // Generate instructions
         List<Instruction> instructions = method.getInstructions();
         for (Instruction inst : instructions) {
-            // If this instruction is the target of some label, emit “thatLabel:”
             if (isLabelTarget(inst)) {
                 String label = getLabelForInstruction(inst);
                 code.append(label).append(":").append(NL);
             }
 
-            // Now convert `inst` → its Jasmin lines (apply(inst) returns a String, possibly
-            // multiple lines separated by NL).  We indent each line with one TAB.
             String instCode = StringLines
                     .getLines(apply(inst))
                     .stream()
@@ -224,15 +229,7 @@ public class JasminGenerator {
 
         code.append(".end method\n");
         currentMethod = null;
-        System.out.println("generateMethod → Jasmin code:\n" + code);
         return code.toString();
-    }
-
-    /** Indent each line of apply(inst) with one TAB */
-    private String indentAndApply(Instruction inst) {
-        return StringLines.getLines(apply(inst))
-                .stream()
-                .collect(Collectors.joining(NL + TAB, TAB, NL));
     }
 
 
@@ -356,14 +353,26 @@ public class JasminGenerator {
 
         var reg = currentMethod.getVarTable().get(operand.getName());
         String storePrefix = getStorePrefix(operand.getType());
-        if (reg.getVirtualReg() > 3) {
-            code.append(storePrefix).append(" ").append(reg.getVirtualReg()).append(NL);
+        int tempReg = 3;
+        if (isTemporary(operand.getName())) {
+            code.append(getStorePrefix(operand.getType()))
+                    .append("_").append(tempReg).append(NL);
         } else {
-            code.append(storePrefix).append("_").append(reg.getVirtualReg()).append(NL);
+            if (reg.getVirtualReg() > 3) {
+                code.append(storePrefix).append(" ").append(reg.getVirtualReg()).append(NL);
+            } else {
+                code.append(storePrefix).append("_").append(reg.getVirtualReg()).append(NL);
+            }
         }
+
 
         return code.toString();
     }
+
+    private boolean isTemporary(String name) {
+        return name.startsWith("temp") || name.equals("j"); // adapt to your naming
+    }
+
 
     private String generateSingleOp(SingleOpInstruction singleOp) {
         return apply(singleOp.getSingleOperand());
@@ -425,11 +434,6 @@ public class JasminGenerator {
                             currentMethod.getParams().indexOf(param) :
                             currentMethod.getParams().indexOf(param) + 1;
 
-                    // For array parameters, ensure index is > 1
-                    if (param.getType() instanceof ArrayType) {
-                        paramIndex = Math.max(2, paramIndex);
-                    }
-
                     return getLoadPrefix(operand.getType()) + " " + paramIndex + NL;
                 }
             }
@@ -445,11 +449,12 @@ public class JasminGenerator {
 
         // For local variables, ensure index is greater than 1 when dealing with arrays
         int localIndex = reg.getVirtualReg();
-        if (operand.getType() instanceof ArrayType) {
-            localIndex = Math.max(2, localIndex);
-        }
 
-        return getLoadPrefix(operand.getType()) + "_" + localIndex + NL;
+        if (localIndex > 3) {
+            return getLoadPrefix(operand.getType()) + " " + localIndex + NL;
+        } else {
+            return getLoadPrefix(operand.getType()) + "_" + localIndex + NL;
+        }
     }
 
     private String getLoadPrefix(Type type) {
