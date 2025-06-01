@@ -15,6 +15,7 @@ public class SemanticAnalysisTest2 {
      */
 
     // ----- ArrayTest -------------------------------------------------------------
+
     /*@Test
     public void ArrayTest() { // BAD
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/ArrayTest.jmm"));
