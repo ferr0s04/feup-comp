@@ -117,10 +117,6 @@ public class JmmSymbolTableBuilder {
                 localVars.add(extractSymbol(varNode));
             }
 
-            // Merge parameters and local variables into the method's scope
-            var allVars = new ArrayList<>(paramList);
-            allVars.addAll(localVars);
-
             // Add to symbol table maps
             parameters.put(methodName, paramList);
             localVariables.put(methodName, localVars);

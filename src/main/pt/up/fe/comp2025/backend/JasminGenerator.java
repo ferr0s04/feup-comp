@@ -261,6 +261,10 @@ public class JasminGenerator {
 
             // Update max if needed
             maxStack = Math.max(maxStack, currentStack);
+
+            if (inst instanceof OpCondInstruction) {
+                maxStack = Math.max(maxStack, currentStack + 2);
+            }
         }
 
         // Add margin for safety
@@ -277,6 +281,9 @@ public class JasminGenerator {
     }
 
     private int getStackConsumption(Instruction inst) {
+        if (inst instanceof OpCondInstruction) {
+            return 2; // Comparisons consume two values
+        }
         return switch (inst.getInstType()) {
             case BINARYOPER -> 2;
             case NOPER -> 0;
@@ -292,6 +299,9 @@ public class JasminGenerator {
     }
 
     private int getStackProduction(Instruction inst) {
+        if (inst instanceof OpCondInstruction) {
+            return 0; // Comparisons don't produce values
+        }
         return switch (inst.getInstType()) {
             case ASSIGN, RETURN -> 0;
             case CALL -> {
@@ -346,7 +356,11 @@ public class JasminGenerator {
 
         var reg = currentMethod.getVarTable().get(operand.getName());
         String storePrefix = getStorePrefix(operand.getType());
-        code.append(storePrefix).append("_").append(reg.getVirtualReg()).append(NL);
+        if (reg.getVirtualReg() > 3) {
+            code.append(storePrefix).append(" ").append(reg.getVirtualReg()).append(NL);
+        } else {
+            code.append(storePrefix).append("_").append(reg.getVirtualReg()).append(NL);
+        }
 
         return code.toString();
     }
@@ -503,7 +517,7 @@ public class JasminGenerator {
             // 3) Generate two unique labels
             int thisId = cmpCounter++;
             String trueLabel = "j_true_" + thisId;
-            String endLabel  = "j_end" + thisId;
+            String endLabel  = "j_end_" + thisId;
 
             // 4) Emit compare → if_icmpXxx trueLabel
             code.append(compareInsn)

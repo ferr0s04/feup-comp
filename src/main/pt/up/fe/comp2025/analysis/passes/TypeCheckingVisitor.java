@@ -11,6 +11,7 @@ import pt.up.fe.comp.jmm.analysis.table.Type;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.HashSet;
+import java.util.stream.Stream;
 
 public class TypeCheckingVisitor extends AnalysisVisitor {
 
@@ -119,7 +120,10 @@ public class TypeCheckingVisitor extends AnalysisVisitor {
             JmmNode methodNode = stmt.getAncestor(Kind.METHOD_DECL).orElse(null);
             String methodName = (methodNode != null) ? methodNode.get("name") : null;
 
-            Type varType = table.getLocalVariables(methodName).stream()
+            Type varType = Stream.concat(
+                            table.getLocalVariables(methodName).stream(),
+                            table.getParameters(methodName).stream()
+                    )
                     .filter(var -> var.getName().equals(varName))
                     .map(Symbol::getType)
                     .findFirst()
