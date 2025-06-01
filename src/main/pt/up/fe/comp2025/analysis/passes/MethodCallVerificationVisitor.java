@@ -8,6 +8,10 @@ import pt.up.fe.comp2025.analysis.AnalysisVisitor;
 import pt.up.fe.comp2025.ast.Kind;
 import pt.up.fe.comp2025.ast.TypeUtils;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
 public class MethodCallVerificationVisitor extends AnalysisVisitor {
 
     private String currentMethod;
@@ -39,12 +43,14 @@ public class MethodCallVerificationVisitor extends AnalysisVisitor {
      */
     private Void visitVarRefExpr(JmmNode varRefExpr, SymbolTable table) {
         String varName = varRefExpr.get("name");
+        JmmNode parent = varRefExpr.getParent();
 
         if ("this".equals(varName) && isStaticMethod) {
             addReport(newError(varRefExpr, "Cannot use 'this' in a static method."));
         } else if (!isDeclared(varName, table)) {
             addReport(newError(varRefExpr, "Variable '" + varName + "' is not declared."));
         }
+
         return null;
     }
 
@@ -52,29 +58,29 @@ public class MethodCallVerificationVisitor extends AnalysisVisitor {
      * Handles method call expressions by verifying different types of method calls: simple method call, array access, and more complex scenarios.
      */
     private Void visitMethodCallExpr(JmmNode methodCallExpr, SymbolTable table) {
+        TypeUtils typeutils = new TypeUtils(table);
         // Check for imported class methods
         if (methodCallExpr.getNumChildren() > 0) {
             JmmNode receiver = methodCallExpr.getChild(0);
             if (Kind.check(receiver, Kind.IDENTIFIER)) {
                 String classOrVar = receiver.get("name");
-                boolean imported = table.getImports().stream()
-                        .anyMatch(imp ->
-                                // full import
-                                imp.equals(classOrVar) ||
-                                        // import with package qualifier
-                                        imp.endsWith("." + classOrVar)
-                        );
+                Type typeclassOrVar = typeutils.getExprType(receiver);;
+                boolean imported = typeutils.isImported(classOrVar) || typeutils.isImported(typeclassOrVar);
+                System.out.println("Imported: " + imported);
                 if (imported) {
                     return null;
                 }
             }
         }
 
-        // One child
-        if (methodCallExpr.getChildren().size() == 1) {
-            JmmNode identifierNode = methodCallExpr.getChildren().getFirst();
+        String methodName = null;
+        JmmNode receiver;
+        List<JmmNode> arguments = new ArrayList<>();
 
-            String methodName;
+        // Parse method call structure
+        if (methodCallExpr.getChildren().size() == 1) {
+            receiver = null;
+            JmmNode identifierNode = methodCallExpr.getChildren().getFirst();
 
             if (identifierNode.getKind().equals(Kind.THIS_REFERENCE.getNodeName())) {
                 methodName = methodCallExpr.get("name");
@@ -84,40 +90,129 @@ public class MethodCallVerificationVisitor extends AnalysisVisitor {
                 addReport(newError(methodCallExpr, "Invalid method call: missing method name."));
                 return null;
             }
-
-            if (isNotDeclaredMethod(methodName, table)) {
-                addReport(newError(methodCallExpr, "Method '" + methodName + "' is not declared or accessible."));
-                return null;
-            }
         } else {
             // Method call with receiver and/or arguments
-            JmmNode identifierNode = methodCallExpr.getChildren().stream()
+            receiver = methodCallExpr.getChildren().stream()
                     .filter(child -> (child.getKind().equals(Kind.IDENTIFIER.getNodeName())
                             || child.getKind().equals(Kind.THIS_REFERENCE.getNodeName())))
                     .findFirst()
                     .orElse(null);
 
-            if (identifierNode == null) {
+            if (receiver == null) {
                 addReport(newError(methodCallExpr, "Method call is missing an identifier or this_reference."));
                 return null;
             }
 
-            String methodName;
-            if (identifierNode.getKind().equals(Kind.THIS_REFERENCE.getNodeName())) {
-                // 'this' reference
+            // Get method name
+            if (receiver.getKind().equals(Kind.THIS_REFERENCE.getNodeName())) {
+                methodName = methodCallExpr.get("name");
+            } else if (methodCallExpr.hasAttribute("name")) {
                 methodName = methodCallExpr.get("name");
             } else {
-                methodName = identifierNode.get("name");
+                methodName = receiver.get("name");
             }
 
-            // Verify if the method is declared
-            if (isNotDeclaredMethod(methodName, table)) {
-                addReport(newError(methodCallExpr, "Method '" + methodName + "' is not declared or accessible."));
-                return null;
+            // Collect arguments (all children that are not the receiver)
+            arguments = methodCallExpr.getChildren().stream()
+                    .filter(child -> !child.equals(receiver))
+                    .collect(Collectors.toList());
+        }
+
+        // Verify if the method is declared
+        if (isNotDeclaredMethod(methodName, table)) {
+            addReport(newError(methodCallExpr, "Method '" + methodName + "' is not declared or accessible."));
+            return null;
+        }
+
+
+        // Get the method declaration to check parameter types
+        List<Symbol> methodParams = table.getParameters(methodName);
+
+        boolean isVarargs;
+        if(!methodParams.isEmpty()) {
+            isVarargs = (methodParams.getLast().getType().hasAttribute("isVarargs") && methodParams.getLast().getType().get("isVarargs").equals("true"));
+        } else {
+            isVarargs = false;
+        }
+
+
+        if(isVarargs){
+            if(methodParams.size() > 1){ // has others besides the varargs
+                for (int i = 0; i < methodParams.size(); i++) {
+                    Symbol param = methodParams.get(i);
+                    if(param.getType().hasAttribute("isVarargs") && param.getType().get("isVarargs").equals("true")){
+                        List<JmmNode> prov = arguments.subList(i, arguments.size());
+                        for (JmmNode a : prov){
+                            if(!typeutils.getExprType(a).getName().equals("int")){
+                                addReport(newError(methodCallExpr,
+                                        "Method '" + methodName + "' expects int.. but got " + typeutils.getExprType(a).getName()));
+                                return null;
+                            }
+                        }
+                        return null;
+                    }
+                    JmmNode argument = arguments.get(i);
+                    Type actualType = typeutils.getExprType(argument);
+
+                    if (!isTypeCompatible(actualType, param.getType())) {
+                        addReport(newError(argument,
+                                "Argument " + (i + 1) + " of method '" + methodName +
+                                        "' expects type '" + param.getType().getName() +
+                                        "' but got '" + actualType.getName() + "'"));
+                        return null;
+                    }
+
+                }
+            } else {
+                for (JmmNode a : arguments){
+                    if(!typeutils.getExprType(a).getName().equals("int")){
+                        addReport(newError(methodCallExpr,
+                                "Method '" + methodName + "' expects int.. but got " + typeutils.getExprType(a).getName()));
+                        return null;
+                    }
+                }
+            }
+            return null;
+        }
+
+        if (methodParams.size() != arguments.size()) {
+            addReport(newError(methodCallExpr,
+                    "Method '" + methodName + "' expects " + methodParams.size() +
+                            " arguments but got " + arguments.size()));
+            return null;
+        }
+
+
+        // Check each argument type against expected parameter type
+        for (int i = 0; i < arguments.size(); i++) {
+            JmmNode argument = arguments.get(i);
+            Symbol expectedParam = methodParams.get(i);
+
+            Type actualType = typeutils.getExprType(argument);
+            Type expectedType = expectedParam.getType();
+
+
+            if (!isTypeCompatible(actualType, expectedType)) {
+                addReport(newError(argument,
+                        "Argument " + (i + 1) + " of method '" + methodName +
+                                "' expects type '" + expectedType.getName() +
+                                "' but got '" + actualType.getName() + "'"));
             }
         }
 
         return null;
+    }
+
+    // Helper method to check type compatibility
+    private boolean isTypeCompatible(Type actual, Type expected) {
+        if (actual.getName().equals(expected.getName()) &&
+                actual.isArray() == expected.isArray()) {
+            return true;
+        }
+
+        // Add inheritance/subtyping rules here if needed - TODO
+        // For now, exact match required
+        return false;
     }
 
     private Void visitArrayAccessExpr(JmmNode arrayAccessExpr, SymbolTable table) {

@@ -32,11 +32,13 @@ public class SemanticAnalysisTest2 {
         TestUtils.noErrors(result);
     }
 
-    /*@Test
+    @Test
     public void ArrayTest3() { // BAD
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/ArrayTest3.jmm"));
+        // Print AST
+        // System.out.println("\n---\n" + result.getRootNode().toTree() + "\n---\n");
         TestUtils.noErrors(result);
-    }*/
+    }
 
     @Test
     public void ArrayTest4() { // GOOD
@@ -382,7 +384,7 @@ public class SemanticAnalysisTest2 {
     }
 
     @Test
-    public void MainTestError8() { // BAD
+    public void MainTestError8() { // GOOD
         // Site: ERROR@semantic, line 3, col 12: Detected unsupported feature: arrays that are not 'int[]' or 'int...' outside of the first parameter of the main method.
         // Although the provided code might be valid in Java, this compiler does not support it because it is not required by the project specification.
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis2/MainTestError8.jmm"));
